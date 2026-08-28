@@ -279,3 +279,142 @@ threshold de recuperación — confirmado en los casos 3 y 5.
   en una sesión futura: no perseguir el código, primero probar
   `npm run build && npm run start` para descartar la app antes de seguir
   debuggeando.
+
+---
+
+## Sesión 5 — Custom Skills y Protocolo MCP
+
+**Estado al cierre**: Prompt 0 + las 8 fases (5.1–5.6) completas. 4 Skills
+de gobernanza commiteadas, servidor MCP con 10 Tools + 7 Resources + 5
+Prompts registrado en `.mcp.json`, lab de validación con hallazgos reales
+corregidos y `mercadotech-automatic-validator` en VALIDACIÓN APROBADA.
+Detalle completo del lab en [`docs/REVISION_S5.md`](./REVISION_S5.md).
+
+### Discrepancias encontradas entre la spec y el estado real del repo
+
+La spec de la Sesión 5 (`MercadoTech_sesion5.md`) se escribió contra un
+estado del repo ligeramente distinto al real. Ninguna bloqueó la sesión,
+pero vale dejarlas explícitas para no repetir la sorpresa:
+
+- **No había repositorio git** pese a que la spec da por hecho commits
+  reales de sesiones anteriores (cita `feccd12`/`fb419eb`). Se inicializó
+  al arrancar esta sesión (`git init` + commit inicial con el snapshot de
+  las Sesiones 2–4), y desde ahí sí se siguió el patrón de commits
+  pequeños por fase/corrección que pide la spec.
+- **`PROMPTS_sesion5.md` no existe** (ni en la raíz ni en `mercadotech/`,
+  que está vacía). No hizo falta: `MercadoTech_sesion5.md` ya trae el
+  detalle completo de cada fase.
+- **`product.service.ts` no tenía `getProductsByIds`**, que la tabla
+  "Estado de partida" de la spec asumía existente como insumo directo de
+  `compare_products`. Se resolvió componiendo `getProductById` (lección 6
+  de la propia spec: derivar en `mcp/src/shared/` en vez de agregar un
+  service nuevo al proyecto web) — ver `mcp/src/shared/products.ts`.
+- **`lib/supabase/admin.ts` no importa `"server-only"`** (a diferencia de
+  lo que decía la lección 8 de la spec, "comprobado en este repo" — ya no
+  lo está). No cambió la decisión: `mcp/src/context.ts` igual construye
+  sus propios clientes con `@supabase/supabase-js`, por las razones
+  correctas (documentadas en el comentario del archivo), no por evitar un
+  guard que en la práctica ya no está.
+- El seed real solo tiene **una laptop activa** (Dell XPS 13) y los
+  nombres de vendedores son **TechZone Perú** / **Digital World** (no
+  "TecnoStore Perú" como decía el texto de ejemplo de la spec). Los
+  ejemplos de verificación de `compare_products` se adaptaron a dos
+  monitores en vez de dos laptops.
+
+### Fase 5.1 — Skills de gobernanza
+
+4 Skills en `.claude/skills/`, cada una un manual de puesto distinto:
+`mercadotech-architecture-enforcer` (gate previo, 9 reglas de capas),
+`mercadotech-code-reviewer` (informe /10, checklist de dominio: RLS,
+snapshots de pedidos, stock vía RPC, pipeline RAG), `mercadotech-
+automatic-validator` (binario APROBADA/FALLIDA) y `mercadotech-tech-lead`
+(scorecard ponderado, deuda nueva vs. ya aceptada). Commiteadas desde el
+primer commit, como exige la lección 1 (heredada de ReadHub, donde se
+perdieron por no versionarlas).
+
+### Fase 5.2 — Scaffolding del servidor MCP
+
+`mcp/` como paquete propio (`@modelcontextprotocol/sdk ^1.29.0` →
+resolvió 1.30.0, `zod ^3.25.76` exacto, `tsup ^8.5.1` exacto — versiones
+pineadas por la lección 4). `console.log/info/warn` redirigidos a stderr
+como primera línea de `index.ts` (stdout sagrado, lección 3);
+`loadEnvLocal()` reutiliza el patrón de `scripts/index-all.ts` sobre la
+`.env.local` de la raíz; `context.ts` fabrica `{anon, admin}` por llamada,
+nunca singleton. Verificado con el MCP Inspector en modo `--cli`
+(`npx @modelcontextprotocol/inspector --cli <comando> --method <m>` —
+mucho más confiable para este entorno que la UI web del Inspector, que
+requiere navegador).
+
+### Fase 5.3 — 10 Tools
+
+Una por archivo, registro central en `tools/index.ts`. Cliente anon por
+defecto; admin solo en las 4 tools que tocan `knowledge_embeddings`
+(sourceType semántico), `orders`/`order_items`, cruzado contra la RLS real
+de cada tabla. Las 10 ejercitadas contra Supabase local con datos reales
+del seed, incluidas las 3 que llaman a Hugging Face real (`semantic_
+search_products`, `ask_assistant`, `find_related_products`) más
+`summarize_reviews`. `get_order_status` expone solo estado/fecha/total/
+ítems, nunca `buyer_id`.
+
+### Fase 5.4 — 7 Resources y 5 Prompts
+
+**Bug real encontrado y corregido durante la verificación**: `shared/
+sellers.ts` y `resources/products.ts` usaban la página 1 de
+`listActiveProducts` (12 productos, `PRODUCTS_PAGE_SIZE`) sin recorrer el
+resto — con 14 productos activos en el seed, `resources/list` mostraba 12
+en vez de 14 y el perfil de un vendedor con productos en la página 2
+habría quedado incompleto. Se agregó `shared/products.getAllActiveProducts`
+que recorre todas las páginas reutilizando el mismo service, sin
+duplicar su query.
+
+`safe.ts` también se ajustó: los errores de `@supabase/supabase-js` no
+siempre son instancias de `Error` (un `fetch` fallido con Supabase caído
+no lo es) — sin extraer `.message` de objetos no-`Error`, el mensaje
+quedaba como el inútil `"[object Object]"`.
+
+### Fase 5.5 — Registro y build
+
+`.mcp.json` en la raíz, `mcp/README.md` con arquitectura y decisiones.
+`npm run build` (tsup) produce `dist/index.js` (1.33MB, ESM, target
+node20); verificado con el Inspector `--cli` apuntando a `node
+mcp/dist/index.js` en vez de `tsx` — igual comportamiento. **Limitación de
+esta sesión**: el paso "probar desde Claude Code reiniciado" no se pudo
+ejecutar porque esta misma sesión no puede reiniciarse a sí misma; queda
+para quien retome la sesión con `.mcp.json` y las Skills ya en el repo.
+
+### Fase 5.6 — Lab de validación
+
+Detalle completo en [`docs/REVISION_S5.md`](./REVISION_S5.md). Resumen:
+11 hallazgos (6 nuevos corregidos en commits separados, 2 aceptados con
+su porqué, 3 falsos positivos documentados). El más importante:
+`hooks/useSellerOrders.ts` era, por comentario propio del código previo a
+esta sesión, "la única lógica de negocio que vive en un hook" — la regla
+de "un paso a la vez" en el estado de un pedido solo se validaba ahí,
+nunca en la RLS (verificado: `orders_update_seller_advance_status` solo
+bloquea `cancelado`) ni en el service. Se movió la validación a
+`seller.service.updateOrderStatus`. Segundo hallazgo relevante: el propio
+build de la Fase 5.5 (`mcp/dist/index.js`, con dependencias empaquetadas)
+estaba siendo lint-eado por el ESLint de la raíz al no estar excluido —
+153 falsos problemas que nada tenían que ver con código propio.
+
+### Decisiones/hallazgos que valen para sesiones futuras
+
+- **Las Skills de una sesión no se cargan en esa misma conversación.**
+  Se descubren recién al reiniciar Claude Code (decisión 9 de la spec).
+  Si una sesión futura crea o modifica Skills y necesita ejercitarlas de
+  verdad (no solo aplicar su checklist a mano), hay que reiniciar la
+  sesión o delegar en una conversación nueva.
+- **El MCP Inspector tiene un modo `--cli` no interactivo**, muy superior
+  al `--web` en este entorno: `npx @modelcontextprotocol/inspector --cli
+  <comando-del-servidor> --method tools/call --tool-name X --tool-arg
+  k=v` (o `--tool-args-json '{"k":[...]}'` para arrays/objetos). Permite
+  scriptear la verificación de tools/resources/prompts sin navegador.
+- **`eslint.config.mjs` debe excluir explícitamente cualquier `dist/` o
+  `node_modules/` que no esté en la raíz** — el patrón `"node_modules/**"`
+  sin `**/` por delante no alcanza paquetes anidados como `mcp/`.
+- **`npm run build` (Next/Turbopack) puede fallar en Windows por una
+  directiva de Control de aplicaciones** que bloquea el binario nativo
+  `@next/swc-win32-x64-msvc` (el fallback wasm no soporta
+  `turbo.createProject`). No es un bug de la app: si pasa, confirmar con
+  `type-check`/`lint` (que sí corren) y dejarlo documentado, no perseguir
+  código que no tiene el problema.

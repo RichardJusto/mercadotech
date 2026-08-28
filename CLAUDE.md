@@ -29,6 +29,17 @@ supabase start        # levanta Supabase local (Docker) — Studio en :54323
 supabase db reset      # reconstruye la BD desde cero: migraciones + seed.sql
 ```
 
+Servidor MCP (`mcp/`, desde la Sesión 5 — comandos SIEMPRE desde la RAÍZ):
+
+```bash
+npx tsx mcp/src/index.ts             # dev
+npm run build --prefix mcp            # build de producción -> mcp/dist/
+node mcp/dist/index.js                # producción
+npm run type-check --prefix mcp        # tsc --noEmit propio de mcp/
+npx @modelcontextprotocol/inspector --cli <comando-arriba> --method tools/list
+                                      # Inspector sin navegador — ver mcp/README.md
+```
+
 Usuarios de prueba (contraseña `MercadoTech123!`): `buyer1/2/3@mercadotech.test`,
 `seller1/2@mercadotech.test`, `admin@mercadotech.test`.
 
@@ -57,6 +68,12 @@ lib/constants/    Todos los tunables (roles, estados, límites) centralizados y 
 types/            Tipos de dominio + database.ts generado por Supabase CLI.
 app/api/v1/       Route Handlers DELGADOS, solo para lo que no puede correr en el
                   navegador (secretos de IA, service role, cookies de sesión).
+mcp/              Servidor MCP (sesión 5, proceso Node aparte de la app Next).
+                  Reutiliza services/ y lib/ai/, NUNCA los reimplementa — ver
+                  mcp/README.md. Nunca importa app/, components/ ni hooks/.
+.claude/skills/   Skills de gobernanza del proyecto (sesión 5): enforcement,
+                  code review, gate binario y juicio de tech-lead — ver
+                  "Skills de gobernanza" más abajo.
 ```
 
 Reglas derivadas:
@@ -120,17 +137,56 @@ Reglas derivadas:
   comentario que justifica su valor — nunca hardcodear un umbral o modelo
   en otro archivo.
 
+## Skills de gobernanza y servidor MCP (desde la Sesión 5)
+
+- **4 Skills en `.claude/skills/`**, cada una con un rol distinto:
+  `mercadotech-architecture-enforcer` (gate PREVIO a crear/mover archivos,
+  checklist de capas), `mercadotech-code-reviewer` (informe /10 sobre
+  código ya escrito), `mercadotech-automatic-validator` (gate binario
+  APROBADA/FALLIDA: enforcer + críticos del reviewer + lint + type-check)
+  y `mercadotech-tech-lead` (scorecard ponderado, deuda nueva vs. ya
+  aceptada en `docs/BITACORA.md`). Se cargan recién al REINICIAR la
+  sesión de Claude Code que las crea o modifica — no están disponibles en
+  la misma conversación que las escribe.
+- **El servidor MCP (`mcp/`) es de SOLO LECTURA** y reutiliza `services/`
+  y `lib/ai/` existentes — nunca reimplementa una consulta de negocio.
+  Cuando algo no existe como service (agregados, un `getById` que falta),
+  se deriva componiendo funciones existentes en `mcp/src/shared/`,
+  documentado en el comentario del archivo — nunca se agrega un service
+  nuevo al proyecto web "para el MCP". `mcp/src/context.ts` arma sus
+  propios clientes Supabase con `@supabase/supabase-js` directo (no
+  `lib/supabase/client.ts` ni `admin.ts`, pensados para Next) POR LLAMADA,
+  nunca singleton. Cliente anon por defecto; admin solo donde la RLS real
+  de la tabla lo exige (`knowledge_embeddings`, `orders`/`order_items`,
+  `profiles`) — la tabla completa está en `mcp/README.md`.
+- **`console.log`/`info`/`warn` están redirigidos a stderr** como primera
+  línea de `mcp/src/index.ts`: con transporte stdio, stdout transporta
+  JSON-RPC y un solo log lo corrompe.
+- **`eslint.config.mjs` excluye `mcp/dist/` y `mcp/node_modules/`** — un
+  bundle de producción de `mcp/` sin excluir contamina el lint de la raíz
+  con código de terceros minificado (bug real de la Sesión 5, ver
+  `docs/REVISION_S5.md`).
+- Verificar el servidor MCP con el **MCP Inspector en modo `--cli`**
+  (`npx @modelcontextprotocol/inspector --cli <comando> --method <m>`),
+  no con `--web`: no requiere navegador y es scripteable.
+
 ## Estado actual
 
-Sesión 4 completa (Prompt 0 + Fases 4.1–4.8): infraestructura vectorial
-(pgvector, `knowledge_embeddings`, RPC `match_knowledge`), indexación
-automática al publicar/editar/eliminar productos, búsqueda semántica en
-`/buscar` (pestaña "Resultados con IA"), asistente de compras (`/asistente`)
-y de soporte (`/soporte`, con "Mis tickets"). Los 6 casos de prueba del RAG
-y la calibración de thresholds están documentados en
-[`docs/RAG.md`](docs/RAG.md). Ver [`docs/BITACORA.md`](docs/BITACORA.md)
-para el registro detallado por fase (Sesiones 2–4) y
-[`docs/SESION3_CHECKLIST.md`](docs/SESION3_CHECKLIST.md) para la pasada de
-calidad de la Sesión 3. Pendiente: Sesiones 5–8 del plan (ver
-[README.md](README.md); la sesión 8 amplía `/soporte` con voz, ya con el
-layout preparado para el botón de micrófono).
+Sesión 5 completa (Prompt 0 + Fases 5.1–5.6): 4 Skills de gobernanza
+commiteadas, servidor MCP (`mcp/`) con 10 Tools + 7 Resources + 5 Prompts
+registrado en `.mcp.json`, y el lab de la Fase 5.6 con
+[`docs/REVISION_S5.md`](docs/REVISION_S5.md) en VALIDACIÓN APROBADA.
+
+Sesión 4: infraestructura vectorial (pgvector, `knowledge_embeddings`, RPC
+`match_knowledge`), indexación automática al publicar/editar/eliminar
+productos, búsqueda semántica en `/buscar` (pestaña "Resultados con IA"),
+asistente de compras (`/asistente`) y de soporte (`/soporte`, con "Mis
+tickets"). Los 6 casos de prueba del RAG y la calibración de thresholds
+están documentados en [`docs/RAG.md`](docs/RAG.md).
+
+Ver [`docs/BITACORA.md`](docs/BITACORA.md) para el registro detallado por
+fase (Sesiones 2–5) y [`docs/SESION3_CHECKLIST.md`](docs/SESION3_CHECKLIST.md)
+para la pasada de calidad de la Sesión 3. Pendiente: Sesiones 6–8 del plan
+(ver [README.md](README.md); la sesión 8 amplía `/soporte` con voz, ya con
+el layout preparado para el botón de micrófono, y reutiliza la tool MCP
+`get_order_status`).
