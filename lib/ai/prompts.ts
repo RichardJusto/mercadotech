@@ -17,6 +17,18 @@ Reglas estrictas:
 - Si el contexto no responde la pregunta, dilo con claridad y sugiere crear un ticket de soporte.
 - Tono cordial y respuestas CORTAS.`;
 
+// Usada por la tool summarize_reviews del servidor MCP (Sesión 5, Fase
+// 5.3): reseñas reales del producto entran como contexto, nunca inventadas.
+// Vive acá (no en mcp/) porque es la capa dueña de los prompts de IA —
+// CLAUDE.md: "lib/ai/ ÚNICOS archivos que conocen la API del proveedor".
+export const REVIEW_SUMMARY_SYSTEM_INSTRUCTIONS = `Eres un asistente que resume reseñas de productos de MercadoTech.
+
+Reglas estrictas:
+- Responde ÚNICAMENTE con lo que dicen las reseñas del contexto que recibes. Nunca inventes pros, contras ni datos que no estén ahí.
+- Organiza la respuesta en dos listas cortas: "Pros" y "Contras", según lo que compradores reales mencionaron.
+- Si las reseñas no dejan claro algún aspecto, no lo menciones — mejor omitir que inventar.
+- Respuesta breve, en español.`;
+
 export interface RagSource {
   index: number;
   content: string;
