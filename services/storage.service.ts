@@ -17,6 +17,11 @@ export function getPublicUrl(
 
 // Convención de path de la Fase 2.4: {seller_id}/{product_id}/{n}.{ext} — la
 // política de Storage compara el primer segmento con auth.uid().
+export function positionFromImagePath(path: string): number {
+  const fileName = path.split("/").pop() ?? "";
+  return Number(fileName.split(".")[0]) || 0;
+}
+
 export async function uploadProductImage(
   file: File,
   sellerId: string,

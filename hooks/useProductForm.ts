@@ -47,11 +47,6 @@ const EMPTY_VALUES: ProductFormValues = {
   categoryId: "",
 };
 
-function extractPositionFromPath(path: string): number {
-  const fileName = path.split("/").pop() ?? "";
-  return Number(fileName.split(".")[0]) || 0;
-}
-
 interface UseProductFormOptions {
   sellerId: string;
   productId?: string; // presente = modo edit
@@ -150,7 +145,7 @@ export function useProductForm({ sellerId, productId }: UseProductFormOptions) {
     // Modo edit: se sube al instante, n = max(n) + 1.
     if (!productId) return;
     const maxN = images.reduce((max, img) => {
-      const n = img.kind === "persisted" ? extractPositionFromPath(img.imagePath) : 0;
+      const n = img.kind === "persisted" ? storageService.positionFromImagePath(img.imagePath) : 0;
       return Math.max(max, n);
     }, 0);
 
