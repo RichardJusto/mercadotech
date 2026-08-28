@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { Product } from "@/types/product";
-import { getProductById } from "@/services/product.service";
+import { getProductById, listActiveProducts } from "@/services/product.service";
 
 type Client = SupabaseClient<Database>;
 
@@ -16,4 +16,20 @@ export async function hydrateProducts(ids: string[], supabase: Client): Promise<
   return results
     .filter((r): r is PromiseFulfilledResult<Product> => r.status === "fulfilled")
     .map((r) => r.value);
+}
+
+// listActiveProducts pagina de a PRODUCTS_PAGE_SIZE (12) porque está
+// pensada para /buscar con scroll — reutilizada acá recorriendo TODAS sus
+// páginas (sin duplicar su query) para derivaciones que necesitan el
+// catálogo activo completo (shared/sellers.ts): con 14+ productos activos
+// en el seed, una sola llamada se queda corta.
+export async function getAllActiveProducts(supabase: Client): Promise<Product[]> {
+  const first = await listActiveProducts({ page: 1 }, supabase);
+  const items = [...first.items];
+  const pages = Math.ceil(first.total / (first.items.length || 1));
+  for (let page = 2; page <= pages && items.length < first.total; page++) {
+    const next = await listActiveProducts({ page }, supabase);
+    items.push(...next.items);
+  }
+  return items;
 }

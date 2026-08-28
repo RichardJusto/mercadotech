@@ -1,15 +1,15 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { getProductById, getProductImages } from "@/services/product.service";
-import { getAverage } from "@/services/review.service";
-import { listByProduct } from "@/services/question.service";
+import { getProductDetail } from "../shared/product-detail";
 import type { McpContext } from "../context";
 import { toolSuccess, toolError } from "../lib/tool-result";
 import { safe } from "../lib/safe";
 import { NotFoundError } from "../lib/errors";
 
 // Cliente anon: ficha de producto activo, imágenes, rating y preguntas son
-// todas públicas (mismas tablas que /producto/[id] en la web).
+// todas públicas (mismas tablas que /producto/[id] en la web). Reutiliza
+// shared/product-detail.ts, la MISMA función que usa el resource
+// mercadotech://products/{id} (Fase 5.4) para no duplicar la composición.
 export function registerGetProduct(server: McpServer, ctx: () => McpContext): void {
   server.registerTool(
     "get_product",
@@ -25,19 +25,14 @@ export function registerGetProduct(server: McpServer, ctx: () => McpContext): vo
       safe(
         async () => {
           const { anon } = ctx();
-          const [product, images, rating, questions] = await Promise.all([
-            getProductById(productId, anon).catch(() => {
-              throw new NotFoundError("Producto", productId);
-            }),
-            getProductImages(productId, anon),
-            getAverage(productId, anon),
-            listByProduct(productId, anon),
-          ]);
+          const detail = await getProductDetail(productId, anon).catch(() => {
+            throw new NotFoundError("Producto", productId);
+          });
 
           return toolSuccess(
-            `${product.title} — S/ ${product.price} (${product.condition}), ` +
-              `rating ${rating.average.toFixed(1)}/5 (${rating.count} reseñas).`,
-            { product, images, rating, questions },
+            `${detail.product.title} — S/ ${detail.product.price} (${detail.product.condition}), ` +
+              `rating ${detail.rating.average.toFixed(1)}/5 (${detail.rating.count} reseñas).`,
+            detail,
           );
         },
         (message) => toolError(message),

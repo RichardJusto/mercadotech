@@ -11,8 +11,20 @@ export async function safe<T>(
   try {
     return await fn();
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = errorMessage(err);
     console.error(message);
     return onError(message);
   }
+}
+
+// Los errores de @supabase/supabase-js (PostgrestError, o un TypeError de
+// fetch cuando la API ni siquiera responde, ej. Supabase detenido) no
+// siempre son instancias de Error pero sí traen `.message` — sin este
+// chequeo, safe() los convertía en el inútil "[object Object]".
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err !== null && "message" in err) {
+    return String((err as { message: unknown }).message);
+  }
+  return String(err);
 }
