@@ -2,6 +2,9 @@
 
 # dependencies
 /node_modules
+/mcp/node_modules
+/mcp/dist
+/mcp/*.tsbuildinfo
 /.pnp
 .pnp.*
 .yarn/*
