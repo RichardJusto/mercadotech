@@ -12,7 +12,10 @@ export function useFavorite(productId: string, userId: string | null) {
       setIsFavorite(false);
       return;
     }
-    favoriteService.isFavorite(productId, userId).then(setIsFavorite);
+    favoriteService
+      .isFavorite(productId, userId)
+      .then(setIsFavorite)
+      .catch((err) => console.error("useFavorite: no se pudo leer el estado", (err as Error).message));
   }, [productId, userId]);
 
   async function toggle() {

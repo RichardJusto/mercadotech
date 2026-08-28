@@ -37,11 +37,16 @@ export function useProduct(productId: string) {
   useEffect(() => {
     // Fire-and-forget: solo registra la vista si hay sesión (product_views
     // exige authenticated); un anónimo no debe ver fallar nada por esto.
-    getCurrentUserId().then((userId) => {
-      if (userId) {
-        registerView(productId, userId).catch(() => {});
-      }
-    });
+    // Mismo patrón de log que indexing-trigger.service.triggerReindex: un
+    // catch mudo no avisa si esto empieza a fallar sistemáticamente.
+    getCurrentUserId()
+      .then((userId) => {
+        if (!userId) return;
+        registerView(productId, userId).catch((err: Error) =>
+          console.warn("useProduct: no se pudo registrar la vista", err.message),
+        );
+      })
+      .catch((err: Error) => console.warn("useProduct: no se pudo leer el usuario actual", err.message));
   }, [productId]);
 
   return { product, images, loading, error };
