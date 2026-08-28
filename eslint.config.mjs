@@ -19,6 +19,8 @@ const eslintConfig = [
       "build/**",
       "next-env.d.ts",
       "supabase/.temp/**",
+      "mcp/dist/**",
+      "mcp/node_modules/**",
     ],
   },
 ];
