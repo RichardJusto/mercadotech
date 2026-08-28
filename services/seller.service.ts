@@ -4,6 +4,7 @@ import type { Database } from "@/types/database";
 import type { Product } from "@/types/product";
 import type { Order } from "@/types/order";
 import type { OrderStatus, ProductCondition } from "@/lib/constants/roles";
+import { ORDER_STATUS_FLOW } from "@/lib/constants/orders";
 import { mapProductRow, type RawProductRow } from "@/services/product.service";
 
 type Client = SupabaseClient<Database>;
@@ -153,13 +154,33 @@ export async function listMyOrders(
   return [...map.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
-// La RLS acepta cualquier estado que no sea 'cancelado' y no valida
-// secuencia: la validación de "un paso adelante" vive en useSellerOrders.
+// La RLS (orders_update_seller_advance_status) solo impide que un vendedor
+// fije 'cancelado' — no valida secuencia, así que cualquier código que
+// llame a este service saltándose la UI podría mandar un pedido de
+// 'pendiente' directo a 'entregado'. Antes esta validación SOLO vivía en
+// el hook useSellerOrders (hallazgo del lab de la Sesión 5: lógica de
+// negocio en un hook, y un pedido sin ella a nivel de datos) — se movió
+// acá para que valga sin importar quién llame al service, no solo desde
+// esa pantalla. No se toca la RLS/migraciones (fuera de alcance de esta
+// sesión); esto es defensa en la capa de servicio, no en la base.
 export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus,
   supabase: Client = createClient(),
 ): Promise<void> {
+  const { data: current, error: currentError } = await supabase
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .single();
+  if (currentError) throw currentError;
+
+  const fromIndex = ORDER_STATUS_FLOW.indexOf(current.status as OrderStatus);
+  const toIndex = ORDER_STATUS_FLOW.indexOf(status);
+  if (current.status === "cancelado" || fromIndex === -1 || toIndex !== fromIndex + 1) {
+    throw new Error("Solo puedes avanzar el pedido un paso a la vez.");
+  }
+
   const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
   if (error) throw error;
 }

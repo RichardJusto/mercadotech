@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import * as sellerService from "@/services/seller.service";
-import { ORDER_STATUS_FLOW } from "@/lib/constants/orders";
 import type { SellerOrder } from "@/services/seller.service";
 import type { OrderStatus } from "@/lib/constants/roles";
 
@@ -31,25 +30,13 @@ export function useSellerOrders(sellerId: string | null) {
     load();
   }, [load]);
 
-  // Única lógica de negocio que vive en un hook (excepción explícita de la
-  // spec): la RLS acepta cualquier estado que no sea 'cancelado', sin
-  // validar secuencia — acá se rechaza cualquier salto que no sea "un paso
-  // adelante" en ORDER_STATUS_FLOW, con actualización optimista y rollback.
+  // La validación de "un paso adelante" vive en seller.service.ts
+  // (updateOrderStatus) — el hook solo hace la actualización optimista y
+  // revierte si el service rechaza la transición. Cero lógica de negocio
+  // propia acá, como el resto de los hooks del proyecto.
   async function move(orderId: string, toStatus: OrderStatus) {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
-
-    if (order.status === "cancelado") {
-      toast.error("Un pedido cancelado no se puede mover.");
-      return;
-    }
-
-    const fromIndex = ORDER_STATUS_FLOW.indexOf(order.status);
-    const toIndex = ORDER_STATUS_FLOW.indexOf(toStatus);
-    if (fromIndex === -1 || toIndex !== fromIndex + 1) {
-      toast.error("Solo puedes avanzar el pedido un paso a la vez.");
-      return;
-    }
 
     const previous = orders;
     setOrders((prev) =>
