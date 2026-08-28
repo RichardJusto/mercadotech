@@ -5,6 +5,12 @@ import { listActiveProducts } from "@/services/product.service";
 
 type Client = SupabaseClient<Database>;
 
+// Tunable propio del MCP (no aplica a la web, así que no vive en
+// lib/constants/ de la raíz): cuántos "más vendidos" devuelve
+// get_store_stats — suficiente para responder "¿qué se vende más?" sin
+// convertir la tool en un reporte completo de ventas.
+const TOP_SELLING_LIMIT = 5;
+
 export interface CategoryProductCount {
   id: string;
   name: string;
@@ -83,7 +89,7 @@ export async function getStoreStats(anon: Client, admin: Client): Promise<StoreS
   }
   const topSelling = [...byProduct.values()]
     .sort((a, b) => b.unitsSold - a.unitsSold)
-    .slice(0, 5);
+    .slice(0, TOP_SELLING_LIMIT);
 
   return { totalActiveProducts, categories: categoryCounts, priceRange, topSelling };
 }
