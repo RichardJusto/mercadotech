@@ -9,10 +9,18 @@ const isCI = !!process.env.CI;
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  // workers SIEMPRE 1 (no solo en CI): los specs comparten filas mutables
+  // del mismo seed entre ARCHIVOS a propósito (el carrito de buyer1, el
+  // pedido PAGADO_ORDER_ID que seller-flow y seller-negative mueven por el
+  // kanban) — correrlos en paralelo produce carreras reales entre archivos
+  // (ej. buyer-negative ve el carrito de buyer1 con ítems que buyer-flow
+  // agregó a mitad de camino), no bugs de la app. Confirmado local: con
+  // `workers: undefined` (paralelo, default de Playwright) fallan 3/8 de
+  // forma no determinística; con `workers: 1` pasan 8/8 siempre.
+  // `fullyParallel: true` queda igual — es inocuo con un solo worker.
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  workers: isCI ? 1 : undefined,
+  workers: 1,
   reporter: isCI ? [["github"], ["html"]] : [["html"], ["list"]],
   use: {
     baseURL,
