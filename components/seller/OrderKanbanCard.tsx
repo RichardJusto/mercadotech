@@ -36,6 +36,7 @@ export function OrderKanbanCard({ order, disabled }: OrderKanbanCardProps) {
   return (
     <div
       ref={setNodeRef}
+      data-testid={`kanban-card-${order.id}`}
       style={{ transform: CSS.Translate.toString(transform) }}
       className={cn(
         "touch-none space-y-1 rounded-md border bg-card p-3 text-sm shadow-sm",

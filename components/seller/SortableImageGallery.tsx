@@ -133,6 +133,7 @@ export function SortableImageGallery({
         <div>
           <input
             ref={inputRef}
+            data-testid="product-image-input"
             type="file"
             accept="image/*"
             multiple

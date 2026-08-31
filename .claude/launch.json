@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "C:\\Program Files\\Git\\bin\\bash.exe",
+      "runtimeArgs": [
+        "-lc",
+        "cd '/c/Users/PC/OneDrive/MercadoTech' && npm run dev"
+      ],
+      "port": 3000
+    }
+  ]
+}

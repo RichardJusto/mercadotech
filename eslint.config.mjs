@@ -21,7 +21,17 @@ const eslintConfig = [
       "supabase/.temp/**",
       "mcp/dist/**",
       "mcp/node_modules/**",
+      "coverage/**",
     ],
+  },
+  {
+    // e2e/ son specs de Playwright, no código de React: su fixture
+    // test.extend() usa un parámetro llamado `use` (convención de
+    // Playwright) que el heurístico de react-hooks confunde con un Hook.
+    files: ["e2e/**/*.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+    },
   },
 ];
 

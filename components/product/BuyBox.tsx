@@ -43,7 +43,9 @@ export function BuyBox({
   return (
     <div className="space-y-4 rounded-lg border p-4">
       {disabledReason ? (
-        <p className="text-sm text-muted-foreground">{disabledReason}</p>
+        <p data-testid="buybox-disabled-reason" className="text-sm text-muted-foreground">
+          {disabledReason}
+        </p>
       ) : (
         <div className="space-y-1.5">
           <label htmlFor="buybox-quantity" className="text-sm font-medium">
@@ -53,7 +55,7 @@ export function BuyBox({
             value={String(quantity)}
             onValueChange={(v) => setQuantity(Number(v))}
           >
-            <SelectTrigger id="buybox-quantity" className="w-24">
+            <SelectTrigger id="buybox-quantity" data-testid="buybox-quantity-trigger" className="w-24">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -69,6 +71,7 @@ export function BuyBox({
 
       <div className="flex gap-2">
         <Button
+          data-testid="buybox-add-to-cart"
           className="flex-1"
           disabled={!!disabledReason}
           onClick={() => onAddToCart(quantity)}

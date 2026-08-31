@@ -33,7 +33,7 @@ function initials(name: string) {
 export function UserMenu({ user, onLogout }: UserMenuProps) {
   if (!user) {
     return (
-      <Button render={<Link href="/login" />} nativeButton={false}>
+      <Button data-testid="navbar-login-link" render={<Link href="/login" />} nativeButton={false}>
         Ingresar
       </Button>
     );
@@ -48,6 +48,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
         render={
           <button
             type="button"
+            data-testid="navbar-user-menu"
             aria-label="Menú de usuario"
             className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
@@ -72,7 +73,9 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onLogout}>Cerrar sesión</DropdownMenuItem>
+        <DropdownMenuItem data-testid="navbar-logout" onClick={onLogout}>
+          Cerrar sesión
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

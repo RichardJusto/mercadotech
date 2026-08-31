@@ -1,10 +1,12 @@
 import type { Role } from "@/lib/constants/roles";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PASSWORD_MIN = 8;
-const DISPLAY_NAME_MIN = 2;
-const DISPLAY_NAME_MAX = 60;
-const REGISTER_ROLES: Role[] = ["buyer", "seller"];
+// Exportadas para que los tests (Fase 6.2) anclen los casos límite a estos
+// valores reales, no a números copiados — cero cambio de comportamiento.
+export const PASSWORD_MIN = 8;
+export const DISPLAY_NAME_MIN = 2;
+export const DISPLAY_NAME_MAX = 60;
+export const REGISTER_ROLES: Role[] = ["buyer", "seller"];
 
 export interface FieldErrors {
   [field: string]: string;

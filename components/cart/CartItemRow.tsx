@@ -48,7 +48,7 @@ export function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowPro
   const quantityOptions = Array.from({ length: product.stock }, (_, i) => i + 1);
 
   return (
-    <div className="flex items-center gap-4 border-b py-4 last:border-0">
+    <div data-testid="cart-item-row" className="flex items-center gap-4 border-b py-4 last:border-0">
       <ProductImage
         src={product.image_url}
         alt={product.title}

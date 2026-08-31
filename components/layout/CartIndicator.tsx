@@ -16,6 +16,7 @@ export function CartIndicator({ count }: CartIndicatorProps) {
       <ShoppingCart className="size-5" aria-hidden="true" />
       {count > 0 ? (
         <Badge
+          data-testid="cart-count"
           variant="destructive"
           className="absolute -top-1 -right-1 h-4 min-w-4 justify-center rounded-full px-1 text-[10px]"
         >

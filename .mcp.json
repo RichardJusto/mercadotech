@@ -1,8 +1,11 @@
 {
   "mcpServers": {
     "mercadotech": {
-      "command": "npx",
-      "args": ["tsx", "mcp/src/index.ts"]
+      "command": "C:\\Users\\PC\\.nvm\\versions\\node\\v22.23.2\\bin\\node.exe",
+      "args": [
+        "C:\\Users\\PC\\OneDrive\\MercadoTech\\node_modules\\tsx\\dist\\cli.mjs",
+        "C:\\Users\\PC\\OneDrive\\MercadoTech\\mcp\\src\\index.ts"
+      ]
     }
   }
 }

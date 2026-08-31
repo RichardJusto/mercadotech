@@ -77,6 +77,7 @@ export function ProductForm({
         <Label htmlFor="product-title">Título</Label>
         <Input
           id="product-title"
+          data-testid="product-title"
           value={values.title}
           onChange={(e) => onFieldChange("title", e.target.value)}
           aria-invalid={!!errors.title}
@@ -88,6 +89,7 @@ export function ProductForm({
         <Label htmlFor="product-description">Descripción</Label>
         <Textarea
           id="product-description"
+          data-testid="product-description"
           value={values.description}
           onChange={(e) => onFieldChange("description", e.target.value)}
         />
@@ -98,6 +100,7 @@ export function ProductForm({
           <Label htmlFor="product-brand">Marca</Label>
           <Input
             id="product-brand"
+            data-testid="product-brand"
             value={values.brand}
             onChange={(e) => onFieldChange("brand", e.target.value)}
           />
@@ -109,7 +112,7 @@ export function ProductForm({
             value={values.condition}
             onValueChange={(v) => onFieldChange("condition", v as ProductCondition)}
           >
-            <SelectTrigger id="product-condition" className="w-full">
+            <SelectTrigger id="product-condition" data-testid="product-condition-trigger" className="w-full">
               <SelectValue>
                 {(v: string | null) => CONDITION_LABELS[v as ProductCondition]}
               </SelectValue>
@@ -130,6 +133,7 @@ export function ProductForm({
           <Label htmlFor="product-price">Precio (S/)</Label>
           <Input
             id="product-price"
+            data-testid="product-price"
             type="number"
             min={0}
             step="0.01"
@@ -144,6 +148,7 @@ export function ProductForm({
           <Label htmlFor="product-stock">Stock</Label>
           <Input
             id="product-stock"
+            data-testid="product-stock"
             type="number"
             min={0}
             value={values.stock}
@@ -160,7 +165,7 @@ export function ProductForm({
           value={values.categoryId}
           onValueChange={(v) => onFieldChange("categoryId", v ?? "")}
         >
-          <SelectTrigger id="product-category" className="w-full">
+          <SelectTrigger id="product-category" data-testid="product-category-trigger" className="w-full">
             <SelectValue>
               {(v: string | null) =>
                 categories.find((c) => c.id === v)?.name ?? "Elige una categoría"
@@ -180,7 +185,7 @@ export function ProductForm({
         ) : null}
       </div>
 
-      <Button type="submit" disabled={submitting}>
+      <Button type="submit" data-testid="product-submit" disabled={submitting}>
         {submitting ? "Guardando..." : submitLabel}
       </Button>
     </form>
