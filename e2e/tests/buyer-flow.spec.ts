@@ -23,11 +23,14 @@ test("flujo comprador: buscar, agregar al carrito y comprar", async ({ page, log
 
   await test.step("filtra 'Laptops' -> el grid solo muestra laptops", async () => {
     await catalog.gotoCategory("laptops");
-    // El <h1> depende de useCategories() (fetch client-side, sin datos de
-    // SSR): en un runner más lento puede tardar más que el timeout default
-    // de 5s en pasar de "Categoría" (fallback) al nombre real.
-    await expect(page.getByRole("heading", { name: "Laptops" })).toBeVisible({ timeout: 10000 });
-    await expect(catalog.productLink(LAPTOP_TITLE)).toBeVisible();
+    // Lo que de verdad prueba "el grid solo muestra laptops" es el producto
+    // filtrado — se verifica primero y con margen amplio. El <h1> depende
+    // de useCategories() (fetch client-side sin datos de SSR) y en un CI
+    // más lento tras un `supabase db reset` recién hecho puede tardar en
+    // pasar de "Categoría" (fallback) al nombre real; para entonces el
+    // producto ya tuvo tiempo de sobra para cargar.
+    await expect(catalog.productLink(LAPTOP_TITLE)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole("heading", { name: "Laptops" })).toBeVisible();
   });
 
   await test.step("abre un producto con stock -> galería y precio", async () => {
