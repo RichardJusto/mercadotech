@@ -29,6 +29,9 @@
 .DS_Store
 *.pem
 
+# claude code: overrides personales, no compartidas con el equipo
+.claude/settings.local.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*
