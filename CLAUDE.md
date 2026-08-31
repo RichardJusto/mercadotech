@@ -19,6 +19,9 @@ npm run build         # build de producción (Turbopack) — corre esto antes de
 npm run start          # sirve el build de producción
 npm run lint          # ESLint (flat config, eslint-config-next)
 npm run type-check     # tsc --noEmit
+npm run test           # Vitest — unitarios de services/lib, sin Docker
+npm run test:coverage  # Vitest con cobertura (usado en CI)
+npm run test:e2e       # Playwright — requiere Supabase local arriba (supabase start + db reset)
 npm run db:types       # supabase gen types typescript --local > types/database.ts
 ```
 
@@ -137,6 +140,41 @@ Reglas derivadas:
   comentario que justifica su valor — nunca hardcodear un umbral o modelo
   en otro archivo.
 
+## Convenciones de Testing (desde la Sesión 6)
+
+- **Ciclo de cierre de cualquier feature: reviewer → correcciones → validator.**
+  `mercadotech-code-reviewer` primero (informe /10, errores críticos e
+  importantes), se corrige lo que aplique, y recién ENTONCES
+  `mercadotech-automatic-validator` como gate final — que desde esta sesión
+  también corre `npm run test` (obligatorio) y los E2E si el stack local
+  está arriba. No se saltea el validator asumiendo que "el reviewer ya lo
+  vio": el reviewer opina, el validator es binario.
+- **Vitest (`npm run test`) no necesita Docker/Supabase arriba** — son tests
+  unitarios de `services/`, `lib/validators/` y helpers puros con mocks de
+  `SupabaseClient`, no integración real.
+- **Playwright E2E (`npm run test:e2e`) SÍ necesita el stack local completo**
+  (`supabase start` + `supabase db reset` con el seed) — corren contra la
+  app real, sin mocks, con los usuarios de prueba de este README.
+- **CI (`.github/workflows/ci.yml`)** tiene dos jobs: `checks` (lint +
+  type-check + test:coverage + type-check de `mcp/`) y `e2e` (Supabase
+  efímero + Playwright chromium), en `pull_request`, `push` a `main` y
+  `workflow_dispatch`. `package.json` fija `"packageManager"` a la versión
+  REAL de npm local (no una asumida) — un mismatch produce
+  `Missing: <paquete>@<versión> from lock file` en `npm ci`, ver
+  [`docs/DEBUGGING.md`](docs/DEBUGGING.md).
+- **El `tsconfig.json` de la raíz excluye `mcp/`** — sin esto, un checkout
+  limpio sin `mcp/node_modules` todavía rompe el `tsc --noEmit` de la raíz
+  intentando compilar archivos de `mcp/` (bug real de la Fase 6.7).
+- **Interacciones de teclado en E2E (dnd-kit) se miden con `boundingBox()`,
+  nunca con un número fijo de teclas.** El paso en píxeles de
+  `@dnd-kit/core` (`KeyboardSensor`) es una constante fija del paquete, pero
+  cuántas veces hace falta apretar la flecha depende del layout real —
+  calibrar ese número contra un solo entorno lo vuelve frágil entre SO/CI
+  (bug real de la Fase 6.7, ver `e2e/pages/SellerKanbanPage.ts`).
+- Ante cualquier fallo real (local o en CI), seguir el flujo de
+  [`docs/DEBUGGING.md`](docs/DEBUGGING.md): reproducir con un test, leer el
+  log correcto según dónde vive el bug, una sola hipótesis a la vez.
+
 ## Skills de gobernanza y servidor MCP (desde la Sesión 5)
 
 - **4 Skills en `.claude/skills/`**, cada una con un rol distinto:
@@ -172,10 +210,22 @@ Reglas derivadas:
 
 ## Estado actual
 
-Sesión 5 completa (Prompt 0 + Fases 5.1–5.6): 4 Skills de gobernanza
-commiteadas, servidor MCP (`mcp/`) con 10 Tools + 7 Resources + 5 Prompts
-registrado en `.mcp.json`, y el lab de la Fase 5.6 con
-[`docs/REVISION_S5.md`](docs/REVISION_S5.md) en VALIDACIÓN APROBADA.
+Sesión 6 completa (Fases 6.1–6.8): suite Vitest (unitarios de
+`services/`/`lib/`), suite Playwright E2E (flujos comprador, vendedor y
+sus negativos, con usuarios de prueba reales contra Supabase local) y
+pipeline de CI en GitHub Actions (`.github/workflows/ci.yml`, jobs
+`checks` + `e2e`) verificado en verde en `push` y `pull_request` contra el
+repo real. Tres bugs reales de CI encontrados y corregidos (exclusión de
+`mcp/` en el `tsconfig.json` raíz, flakiness de teclado en el kanban,
+race de timing en un fetch client-side) — documentados como casos reales
+en [`docs/DEBUGGING.md`](docs/DEBUGGING.md). El gate de
+`mercadotech-automatic-validator` ahora incluye `npm run test` (obligatorio)
+y los E2E cuando el stack local está arriba.
+
+Sesión 5: 4 Skills de gobernanza commiteadas, servidor MCP (`mcp/`) con 10
+Tools + 7 Resources + 5 Prompts registrado en `.mcp.json`, y el lab de la
+Fase 5.6 con [`docs/REVISION_S5.md`](docs/REVISION_S5.md) en VALIDACIÓN
+APROBADA.
 
 Sesión 4: infraestructura vectorial (pgvector, `knowledge_embeddings`, RPC
 `match_knowledge`), indexación automática al publicar/editar/eliminar
@@ -185,8 +235,8 @@ tickets"). Los 6 casos de prueba del RAG y la calibración de thresholds
 están documentados en [`docs/RAG.md`](docs/RAG.md).
 
 Ver [`docs/BITACORA.md`](docs/BITACORA.md) para el registro detallado por
-fase (Sesiones 2–5) y [`docs/SESION3_CHECKLIST.md`](docs/SESION3_CHECKLIST.md)
-para la pasada de calidad de la Sesión 3. Pendiente: Sesiones 6–8 del plan
+fase (Sesiones 2–6) y [`docs/SESION3_CHECKLIST.md`](docs/SESION3_CHECKLIST.md)
+para la pasada de calidad de la Sesión 3. Pendiente: Sesiones 7–8 del plan
 (ver [README.md](README.md); la sesión 8 amplía `/soporte` con voz, ya con
 el layout preparado para el botón de micrófono, y reutiliza la tool MCP
 `get_order_status`).

@@ -39,13 +39,21 @@ falló y DÓNDE; la corrección es un paso aparte.
 4. **`npm run type-check`** en la raíz — debe salir limpio. Si el alcance
    incluye `mcp/`, también `npm run type-check` dentro de `mcp/`.
 
-5. **`npm run test`** — solo aplica desde que exista (Sesión 6). Si el
-   `package.json` de la raíz no tiene script `test` todavía, este ítem se
-   OMITE explícitamente en el reporte (no cuenta ni a favor ni en contra).
+5. **`npm run test`** (Sesión 6, obligatorio) — la suite de Vitest completa
+   debe salir en verde. Correrla con Docker/Supabase apagado si es posible
+   (los tests unitarios no deberían necesitarlo — si fallan solo por eso,
+   ESO es un hallazgo aparte, no una excusa para saltear el ítem).
+
+6. **`npm run test:e2e -- --project=chromium`** (Sesión 6) — SOLO si el
+   stack local está arriba (`supabase status` en verde primero). Si no lo
+   está, el ítem se OMITE explícitamente en el reporte (no cuenta ni a
+   favor ni en contra) — no se levanta Supabase solo para validar. Si el
+   stack SÍ está arriba y los E2E no corren o rompen, es FALLA como
+   cualquier otro ítem.
 
 ## Formato de salida
 
-Recorré los 5 ítems en orden y por cada uno anotá PASA / FALLA con la
+Recorré los 6 ítems en orden y por cada uno anotá PASA / FALLA con la
 evidencia concreta (el comando corrido y su salida relevante, o el archivo
 y línea del hallazgo). Al final, una sola línea de veredicto:
 

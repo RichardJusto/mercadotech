@@ -418,3 +418,105 @@ estaba siendo lint-eado por el ESLint de la raíz al no estar excluido —
   `turbo.createProject`). No es un bug de la app: si pasa, confirmar con
   `type-check`/`lint` (que sí corren) y dejarlo documentado, no perseguir
   código que no tiene el problema.
+
+## Sesión 6 — Testing y CI con GitHub Actions
+
+**Estado al cierre**: Fases 6.1–6.8 completas. Suite Vitest (159 tests
+unitarios de `services/`/`lib/`), suite Playwright E2E (8 tests: flujos
+comprador/vendedor y sus negativos, contra Supabase local con el seed
+real), pipeline de CI en GitHub Actions (`.github/workflows/ci.yml`, jobs
+`checks` + `e2e`) conectado al repo real
+(`github.com/RichardJusto/mercadotech`) y verificado en verde en `push` a
+`main` y en `pull_request`. `mercadotech-automatic-validator` actualizado:
+`npm run test` ahora es obligatorio en el gate, y los E2E corren cuando el
+stack local está arriba. `docs/DEBUGGING.md` nuevo, con la tabla de
+errores típicos basada en incidentes reales de esta misma sesión.
+
+### Fases 6.1–6.6 — Suites de test
+
+Vitest para `services/`/`lib/` (mocks de `SupabaseClient`, sin red) y
+Playwright para los flujos E2E de comprador y vendedor, con Page Objects
+en `e2e/pages/` y usuarios de prueba reales. Sin cambios de lógica de
+producción: la única excepción tocada fue agregar `data-testid` a
+elementos que los tests necesitaban ubicar (la validación de "un paso a la
+vez" del kanban ya vivía en `seller.service.ts` desde la Fase 5.6, no hizo
+falta exportar nada nuevo).
+
+### Fase 6.7 — CI real contra GitHub Actions
+
+Tres bugs reales de CI, ninguno reproducible en local antes de esta
+sesión — los tres están documentados con detalle en
+[`docs/DEBUGGING.md`](./DEBUGGING.md):
+
+1. **`tsconfig.json` de la raíz sin excluir `mcp/`**: en un checkout
+   limpio (sin `mcp/node_modules` todavía), el `tsc --noEmit` de la raíz
+   intentaba compilar `mcp/tsup.config.ts` y fallaba con
+   `Cannot find module 'tsup'`. Invisible en local porque `mcp/node_modules`
+   venía persistiendo de sesiones anteriores. Fix: `"mcp"` agregado a
+   `exclude`.
+2. **Flakiness del drag & drop por teclado del kanban**: un número fijo de
+   `ArrowRight` (20, calibrado solo contra Windows local) resultó frágil en
+   el runner Linux de CI — el paso de 25px de `@dnd-kit/core` es una
+   constante fija del paquete, pero la geometría real del layout no lo es.
+   Fix: `SellerKanbanPage.moveToColumn` mide `boundingBox()` de la tarjeta
+   y la columna destino y deriva la cantidad exacta de repeticiones.
+3. **Race de timing en el filtro de categoría**: el `<h1>` de
+   `/categoria/laptops` depende de `useCategories()` (fetch client-side sin
+   SSR) y en CI, justo tras un `supabase db reset`, podía tardar más que el
+   timeout en pasar del fallback "Categoría" al nombre real — mientras que
+   el producto filtrado (el dato que de verdad prueba el filtro) ya estaba
+   listo hacía rato. Fix: reordenar el test para verificar primero el
+   producto (timeout generoso) y recién después el `<h1>`.
+
+**Verificación de la Fase 6.7 completa**: push a `main` verde, PR de humo
+(`ci-smoke`) verde en el trigger `pull_request`, coverage descargable
+desde un run verde, drag & drop cubierto por E2E de teclado real.
+
+### Fase 6.8 — Gate binario + guía de debugging
+
+- `mercadotech-automatic-validator` actualizado quirúrgicamente: el ítem 5
+  pasó de "se omite si no existe `test`" a obligatorio; se agregó el ítem 6
+  para E2E, condicional a que `supabase status` esté verde.
+- `docs/DEBUGGING.md` nuevo: flujo de debugging (síntoma → reproducir con
+  un test → leer el log correcto según dónde vive el bug → una hipótesis →
+  fix → el test pasa), cómo pedirle ayuda a Claude, y una tabla de errores
+  típicos con mensaje literal y primer paso — incluye los tres bugs de la
+  Fase 6.7 como ejemplos reales, más el hallazgo de abajo.
+- **Verificación del gate**: se rompió a propósito `lib/utils.test.ts`
+  (`formatPrice(0)` esperando `"S/ 0.99"` en vez de `"S/ 0.00"`), se corrió
+  `npm run test` y falló citando exactamente ese test
+  (`lib/utils.test.ts > formatPrice > formatea 0`) — equivalente a
+  VALIDACIÓN FALLIDA. Se revirtió y `lint` + `type-check` + `test`
+  (159/159) + `type-check` de `mcp/` quedaron todos limpios — VALIDACIÓN
+  APROBADA.
+- **Bug real encontrado en esta misma verificación**: `npm run test:e2e`
+  en local (sin `CI` seteado) fallaba de forma no determinística —
+  distinto subconjunto de los 8 tests en cada corrida (`cart-count` en "4"
+  en vez de "2", un carrito "vacío" con ítems, un kanban sin la tarjeta
+  esperada). Causa: `playwright.config.ts` tenía `workers: isCI ? 1 :
+  undefined` — los specs comparten filas mutables del mismo seed entre
+  ARCHIVOS a propósito (el carrito de `buyer1`, el pedido
+  `PAGADO_ORDER_ID`), así que solo son seguros en serie; en CI ya corrían
+  con `workers: 1`, pero en local, sin esa variable, Playwright paraleliza
+  por defecto y los archivos se pisan entre sí. Fix: `workers: 1` sin
+  condicionar a `isCI`. Confirmado: con el fix, 8/8 en verde de forma
+  consistente (antes, 3/8 fallaban al azar según el orden de scheduling).
+
+### Decisiones/hallazgos que valen para sesiones futuras
+
+- **Un `workers` o timeout condicionado a `isCI` es una señal de alerta**
+  cuando los tests comparten estado mutable — si el comportamiento
+  correcto depende de correr en serie, tiene que ser así en TODOS los
+  entornos, no solo en CI. La asimetría es exactamente lo que hizo que este
+  bug pasara semanas invisible (CI siempre estuvo en verde).
+- **Los tres bugs de CI de la Fase 6.7 comparten un patrón**: ninguno era
+  reproducible localmente ANTES de correr contra un entorno distinto
+  (checkout limpio, runner Linux, timing bajo `db reset` reciente) — la
+  lección no es "cómo se arregla cada uno" sino que un pipeline de CI real
+  contra un entorno limpio encuentra clases de bugs que ningún test local
+  bien intencionado detecta solo.
+- **`git cherry-pick` es la herramienta correcta para recuperar un commit
+  hecho por error en una rama descartable** (ej. una rama de humo para
+  probar el trigger `pull_request`) antes de borrarla — `git branch -d`
+  (no `-D`) se niega si hay commits no mergeados, lo cual es la señal para
+  pausar y cherry-pickear en vez de forzar el borrado.
