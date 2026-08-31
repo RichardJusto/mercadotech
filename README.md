@@ -87,3 +87,5 @@ Reglas derivadas (aplican en todas las sesiones):
   índice y función).
 - En CI se fija la versión de npm (deps opcionales de Linux ausentes en el lockfile
   generado en Windows) y el E2E corre contra un Supabase local efímero, sin secretos.
+
+<!-- ci-smoke: verificación del trigger pull_request de la Fase 6.7 -->
