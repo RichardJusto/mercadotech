@@ -28,6 +28,12 @@ function imageUrl(image: GalleryImage): string {
   return image.kind === "local" ? image.previewUrl : image.imageUrl;
 }
 
+function formatBytes(bytes: number): string {
+  return bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    : `${Math.round(bytes / 1024)} KB`;
+}
+
 interface SortableThumbnailProps {
   image: GalleryImage;
   isCover: boolean;
@@ -37,42 +43,57 @@ interface SortableThumbnailProps {
 function SortableThumbnail({ image, isCover, onRemove }: SortableThumbnailProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: image.key });
+  const standard = image.kind === "local" ? image.standard : null;
 
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn(
-        "relative shrink-0 touch-none rounded-md border-2",
-        isCover ? "border-primary" : "border-transparent",
-        isDragging && "opacity-50",
-      )}
+      className={cn("flex shrink-0 touch-none flex-col gap-1", isDragging && "opacity-50")}
       {...attributes}
       {...listeners}
     >
-      <ProductImage
-        src={imageUrl(image)}
-        alt=""
-        width={80}
-        height={80}
-        className="size-20 rounded object-cover"
-      />
-      {isCover ? (
-        <span className="absolute bottom-0 left-0 rounded-tr bg-primary px-1 text-[10px] text-primary-foreground">
-          Portada
-        </span>
-      ) : null}
-      <Button
-        type="button"
-        variant="destructive"
-        size="icon-sm"
-        className="absolute -top-2 -right-2 rounded-full"
-        aria-label="Quitar imagen"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={onRemove}
+      <div
+        className={cn(
+          "relative rounded-md border-2",
+          isCover ? "border-primary" : "border-transparent",
+        )}
       >
-        <X className="size-3" />
-      </Button>
+        <ProductImage
+          src={imageUrl(image)}
+          alt=""
+          width={80}
+          height={80}
+          className="size-20 rounded object-cover"
+        />
+        {isCover ? (
+          <span className="absolute bottom-0 left-0 rounded-tr bg-primary px-1 text-[10px] text-primary-foreground">
+            Portada
+          </span>
+        ) : null}
+        <Button
+          type="button"
+          variant="destructive"
+          size="icon-sm"
+          className="absolute -top-2 -right-2 rounded-full"
+          aria-label="Quitar imagen"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={onRemove}
+        >
+          <X className="size-3" />
+        </Button>
+      </div>
+      {standard ? (
+        <div className="w-20 text-center text-[10px] leading-tight text-muted-foreground">
+          <p>
+            {standard.width}×{standard.height}px
+          </p>
+          <p>{formatBytes(standard.sizeBytes)}</p>
+          {standard.warnings.length > 0 ? (
+            <p className="text-amber-600 dark:text-amber-400">No cuadrada</p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

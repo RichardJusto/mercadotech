@@ -7,7 +7,12 @@ import * as storageService from "@/services/storage.service";
 import { getProductById, getProductImages } from "@/services/product.service";
 import { triggerReindex } from "@/services/indexing-trigger.service";
 import { validateProduct, type FieldErrors } from "@/lib/validators/product";
-import { ALLOWED_IMAGE_TYPES, MAX_IMAGES_PER_PRODUCT, MAX_IMAGE_BYTES } from "@/lib/constants/product";
+import {
+  checkProductImageStandard,
+  type ProductImageMeta,
+  type ProductImageStandardResult,
+} from "@/lib/validators/product-image";
+import { MAX_IMAGES_PER_PRODUCT } from "@/lib/constants/product";
 import type { ProductCondition } from "@/lib/constants/roles";
 
 export interface LocalGalleryImage {
@@ -15,6 +20,29 @@ export interface LocalGalleryImage {
   key: string;
   file: File;
   previewUrl: string;
+  // Dimensiones/peso/formato ya evaluados contra el estándar (ver
+  // lib/validators/product-image.ts) — SortableImageGallery los muestra
+  // como caption y warning debajo de la miniatura.
+  standard: ProductImageStandardResult;
+}
+
+// Único punto de la app que decodifica el File para leer su resolución
+// real — solo tiene sentido en el navegador (Image real), por eso vive acá
+// y no en lib/validators/ (framework-agnostic a propósito).
+function readImageFile(file: File): Promise<ProductImageMeta> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight, sizeBytes: file.size, type: file.type });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("No se pudo leer la imagen — el archivo puede estar dañado."));
+    };
+    img.src = url;
+  });
 }
 
 export interface PersistedGalleryImage {
@@ -114,29 +142,56 @@ export function useProductForm({ sellerId, productId }: UseProductFormOptions) {
     );
   }
 
-  function addFiles(files: File[]) {
+  async function addFiles(files: File[]) {
     const room = MAX_IMAGES_PER_PRODUCT - images.length;
-    const valid = files.filter(
-      (file) =>
-        ALLOWED_IMAGE_TYPES.includes(file.type as (typeof ALLOWED_IMAGE_TYPES)[number]) &&
-        file.size <= MAX_IMAGE_BYTES,
-    );
-    if (valid.length < files.length) {
-      toast.error("Algunas imágenes no son válidas (tipo o tamaño mayor a 5 MB).");
-    }
-    const toAdd = valid.slice(0, room);
-    if (valid.length > room) {
+    if (files.length > room) {
       toast.error(`Máximo ${MAX_IMAGES_PER_PRODUCT} imágenes por producto.`);
     }
+    const candidates = files.slice(0, room);
+
+    // Se lee cada archivo (dimensiones reales, no solo type/size) y se
+    // evalúa contra el estándar ANTES de agregarlo — así el vendedor se
+    // entera al toque si una foto no sirve, no recién al publicar.
+    const checked = await Promise.all(
+      candidates.map(async (file) => {
+        try {
+          const meta = await readImageFile(file);
+          return { file, standard: checkProductImageStandard(meta) };
+        } catch (err) {
+          return {
+            file,
+            standard: {
+              width: 0,
+              height: 0,
+              sizeBytes: file.size,
+              type: file.type,
+              errors: [(err as Error).message],
+              warnings: [],
+            },
+          };
+        }
+      }),
+    );
+
+    const accepted = checked.filter(({ standard }) => standard.errors.length === 0);
+    checked
+      .filter(({ standard }) => standard.errors.length > 0)
+      .forEach(({ file, standard }) => toast.error(`${file.name}: ${standard.errors.join(" ")}`));
+    accepted.forEach(({ file, standard }) =>
+      standard.warnings.forEach((warning) => toast.warning(`${file.name}: ${warning}`)),
+    );
+
+    if (accepted.length === 0) return;
 
     if (mode === "create") {
       setImages((prev) => [
         ...prev,
-        ...toAdd.map((file) => ({
+        ...accepted.map(({ file, standard }) => ({
           kind: "local" as const,
           key: crypto.randomUUID(),
           file,
           previewUrl: URL.createObjectURL(file),
+          standard,
         })),
       ]);
       return;
@@ -149,9 +204,9 @@ export function useProductForm({ sellerId, productId }: UseProductFormOptions) {
       return Math.max(max, n);
     }, 0);
 
-    toAdd
+    accepted
       .reduce(
-        (chain, file, index) =>
+        (chain, { file }, index) =>
           chain.then(async () => {
             const { path } = await storageService.uploadProductImage(
               file,
