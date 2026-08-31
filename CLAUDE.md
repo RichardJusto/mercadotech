@@ -177,15 +177,22 @@ Reglas derivadas:
 
 ## Skills de gobernanza y servidor MCP (desde la Sesión 5)
 
-- **4 Skills en `.claude/skills/`**, cada una con un rol distinto:
-  `mercadotech-architecture-enforcer` (gate PREVIO a crear/mover archivos,
-  checklist de capas), `mercadotech-code-reviewer` (informe /10 sobre
-  código ya escrito), `mercadotech-automatic-validator` (gate binario
-  APROBADA/FALLIDA: enforcer + críticos del reviewer + lint + type-check)
-  y `mercadotech-tech-lead` (scorecard ponderado, deuda nueva vs. ya
-  aceptada en `docs/BITACORA.md`). Se cargan recién al REINICIAR la
-  sesión de Claude Code que las crea o modifica — no están disponibles en
-  la misma conversación que las escribe.
+- **7 Skills en `.claude/skills/`**, cada una con un rol distinto. Las 4
+  de la Sesión 5: `mercadotech-architecture-enforcer` (gate PREVIO a
+  crear/mover archivos, checklist de capas), `mercadotech-code-reviewer`
+  (informe /10 sobre código ya escrito), `mercadotech-automatic-validator`
+  (gate binario APROBADA/FALLIDA: enforcer + críticos del reviewer + lint
+  + type-check + test + E2E) y `mercadotech-tech-lead` (scorecard
+  ponderado, deuda nueva vs. ya aceptada en `docs/BITACORA.md`). Tres más,
+  agregadas después de la Sesión 6, cada una auditando una zona con bugs
+  reales ya documentados: `mercadotech-rag-auditor` (trampas específicas
+  del pipeline de IA — mezclar mecanismos de HF, dimensión del embedding,
+  threshold vs. precisión, ver `docs/RAG.md`), `mercadotech-e2e-patterns`
+  (patrones de tests E2E que ya rompieron CI o el entorno local — ver
+  `docs/DEBUGGING.md`) y `mercadotech-rls-auditor` (RLS/permisos de
+  migraciones nuevas, no del código que las consume). Se cargan recién al
+  REINICIAR la sesión de Claude Code que las crea o modifica — no están
+  disponibles en la misma conversación que las escribe.
 - **El servidor MCP (`mcp/`) es de SOLO LECTURA** y reutiliza `services/`
   y `lib/ai/` existentes — nunca reimplementa una consulta de negocio.
   Cuando algo no existe como service (agregados, un `getById` que falta),
