@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { RegisterForm, type RegisterFormValues } from "@/components/auth/RegisterForm";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function RegisterPage() {
   return (
@@ -36,12 +37,18 @@ function RegisterPageContent() {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Crear cuenta</h1>
-      <RegisterForm onSubmit={handleSubmit} loading={loading} error={error} />
+    <div className="animate-rise space-y-4">
+      <Card className="glow-ring">
+        <CardHeader>
+          <h1 className="font-heading text-xl font-semibold">Crear cuenta</h1>
+        </CardHeader>
+        <CardContent>
+          <RegisterForm onSubmit={handleSubmit} loading={loading} error={error} />
+        </CardContent>
+      </Card>
       <p className="text-center text-sm text-muted-foreground">
         ¿Ya tienes cuenta?{" "}
-        <Link href="/login" className="text-primary hover:underline">
+        <Link href="/login" className="font-medium text-primary hover:underline">
           Inicia sesión
         </Link>
       </p>

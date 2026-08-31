@@ -1,12 +1,31 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { listActiveProducts } from "@/services/product.service";
+import { Logo } from "@/components/shared/Logo";
+import { AuthShowcasePanel } from "@/components/auth/AuthShowcasePanel";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+const SHOWCASE_PRODUCT_COUNT = 4;
+
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const { items } = await listActiveProducts({ sort: "recientes" }, supabase);
+  const showcaseProducts = items.slice(0, SHOWCASE_PRODUCT_COUNT).map((product) => ({
+    id: product.id,
+    title: product.title,
+    price: product.price,
+    image_url: product.image_url,
+  }));
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
-      <Link href="/" className="text-2xl font-bold text-primary">
-        MercadoTech
-      </Link>
-      <div className="w-full max-w-sm">{children}</div>
+    <div className="grid min-h-screen lg:grid-cols-2">
+      <div className="flex flex-col items-center justify-center gap-6 p-4">
+        <Link href="/">
+          <Logo />
+        </Link>
+        <div className="w-full max-w-sm">{children}</div>
+      </div>
+
+      <AuthShowcasePanel products={showcaseProducts} />
     </div>
   );
 }

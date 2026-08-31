@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginForm, type LoginFormValues } from "@/components/auth/LoginForm";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function LoginPage() {
   return (
@@ -30,12 +31,18 @@ function LoginPageContent() {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Iniciar sesión</h1>
-      <LoginForm onSubmit={handleSubmit} loading={loading} error={error} />
+    <div className="animate-rise space-y-4">
+      <Card className="glow-ring">
+        <CardHeader>
+          <h1 className="font-heading text-xl font-semibold">Iniciar sesión</h1>
+        </CardHeader>
+        <CardContent>
+          <LoginForm onSubmit={handleSubmit} loading={loading} error={error} />
+        </CardContent>
+      </Card>
       <p className="text-center text-sm text-muted-foreground">
         ¿No tienes cuenta?{" "}
-        <Link href="/register" className="text-primary hover:underline">
+        <Link href="/register" className="font-medium text-primary hover:underline">
           Regístrate
         </Link>
       </p>

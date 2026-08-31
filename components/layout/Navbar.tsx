@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Container } from "@/components/shared/Container";
+import { Logo } from "@/components/shared/Logo";
 import { SearchBar } from "@/components/layout/SearchBar";
 import { CategoriesMenu } from "@/components/layout/CategoriesMenu";
 import { CartIndicator } from "@/components/layout/CartIndicator";
@@ -29,7 +30,7 @@ interface NavbarProps {
 
 export function Navbar({ categories, cartCount, user, onLogout, onSearch }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background">
+    <header className="sticky top-0 z-40 border-b border-glow-soft bg-background/85 backdrop-blur-md supports-backdrop-filter:bg-background/70">
       <Container className="flex h-14 items-center gap-4">
         <MobileNav
           categories={categories}
@@ -38,8 +39,8 @@ export function Navbar({ categories, cartCount, user, onLogout, onSearch }: Navb
           onSearch={onSearch}
         />
 
-        <Link href="/" className="text-lg font-bold text-primary">
-          MercadoTech
+        <Link href="/" className="shrink-0">
+          <Logo size="sm" />
         </Link>
 
         <div className="hidden md:block">

@@ -30,7 +30,7 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
         onSearch={(query) => router.push(`/buscar?q=${encodeURIComponent(query)}`)}
       />
       <main className="flex-1">{children}</main>
-      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
+      <footer className="relative border-t py-6 text-center text-sm text-muted-foreground before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-glow before:to-transparent before:opacity-40">
         <Container>© {new Date().getFullYear()} MercadoTech</Container>
       </footer>
     </div>

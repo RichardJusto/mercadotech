@@ -11,6 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { NavLink } from "@/components/layout/NavLink";
+import { Logo } from "@/components/shared/Logo";
 
 const LINKS = [
   { href: "/vendedor/productos", label: "Mis productos", icon: LayoutGrid },
@@ -26,8 +27,8 @@ function SidebarLinks({ onNavigate }: { onNavigate?: () => void }) {
           key={href}
           href={href}
           onClick={onNavigate}
-          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-          activeClassName="bg-muted text-primary font-semibold"
+          className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-glow-soft"
+          activeClassName="glow-ring bg-glow-soft text-primary font-semibold"
         >
           <Icon className="size-4" aria-hidden="true" />
           {label}
@@ -42,7 +43,8 @@ export function SellerSidebar() {
 
   return (
     <>
-      <div className="border-b p-2 md:hidden">
+      <div className="flex items-center justify-between border-b border-glow-soft p-2 md:hidden">
+        <Logo size="sm" className="pl-1" />
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger
             render={
@@ -62,7 +64,10 @@ export function SellerSidebar() {
         </Sheet>
       </div>
 
-      <aside className="hidden w-56 shrink-0 border-r p-4 md:block">
+      <aside className="hidden w-56 shrink-0 border-r border-glow-soft p-4 md:block">
+        <div className="mb-6 px-1">
+          <Logo size="sm" />
+        </div>
         <SidebarLinks />
       </aside>
     </>

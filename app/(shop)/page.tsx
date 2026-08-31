@@ -35,40 +35,53 @@ function HomePageContent() {
   const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE));
 
   return (
-    <Container className="grid gap-6 py-8 lg:grid-cols-[240px_1fr]">
-      <aside className="hidden lg:block">
-        <FiltersPanel value={filters} onChange={setFilter} />
-      </aside>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Todos los productos</h1>
-          <Sheet>
-            <SheetTrigger
-              render={
-                <Button variant="outline" className="lg:hidden" size="sm">
-                  <SlidersHorizontal className="size-4" /> Filtros
-                </Button>
-              }
-            />
-            <SheetContent side="left" className="p-4">
-              <SheetHeader className="p-0">
-                <SheetTitle>Filtros</SheetTitle>
-              </SheetHeader>
-              <FiltersPanel value={filters} onChange={setFilter} className="mt-4" />
-            </SheetContent>
-          </Sheet>
-        </div>
-
-        {error ? (
-          <ErrorState onRetry={retry} />
-        ) : (
-          <>
-            <ProductGrid products={items} loading={loading} />
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-          </>
-        )}
+    <>
+      <div className="bg-aurora bg-grid relative border-b">
+        <Container className="relative py-10">
+          <p className="text-xs font-medium tracking-[0.2em] text-primary uppercase">
+            Marketplace tech
+          </p>
+          <h1 className="mt-2 max-w-lg text-2xl font-bold text-balance sm:text-3xl">
+            Todo lo que necesitás en tecnología, en un solo lugar.
+          </h1>
+        </Container>
       </div>
-    </Container>
+
+      <Container className="grid gap-6 py-8 lg:grid-cols-[240px_1fr]">
+        <aside className="hidden lg:block">
+          <FiltersPanel value={filters} onChange={setFilter} />
+        </aside>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Todos los productos</h2>
+            <Sheet>
+              <SheetTrigger
+                render={
+                  <Button variant="outline" className="lg:hidden" size="sm">
+                    <SlidersHorizontal className="size-4" /> Filtros
+                  </Button>
+                }
+              />
+              <SheetContent side="left" className="p-4">
+                <SheetHeader className="p-0">
+                  <SheetTitle>Filtros</SheetTitle>
+                </SheetHeader>
+                <FiltersPanel value={filters} onChange={setFilter} className="mt-4" />
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          {error ? (
+            <ErrorState onRetry={retry} />
+          ) : (
+            <>
+              <ProductGrid products={items} loading={loading} />
+              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            </>
+          )}
+        </div>
+      </Container>
+    </>
   );
 }
