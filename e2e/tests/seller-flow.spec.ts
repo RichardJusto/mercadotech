@@ -55,11 +55,12 @@ test("flujo vendedor: publicar producto y mover un pedido por el kanban (teclado
     await kanban.goto();
     await expect(kanban.card(PAGADO_ORDER_ID)).toBeVisible();
 
-    // El número de ArrowRight necesarios para cruzar de columna se determinó
-    // empíricamente contra la app real (KeyboardSensor de @dnd-kit/core, sin
-    // coordinateGetter de @dnd-kit/sortable — mueve por píxeles, no por
-    // posición de lista, a diferencia de la galería de imágenes de 6.4).
-    await kanban.moveRightByKeyboard(PAGADO_ORDER_ID, 20);
+    // Camino de teclado de dnd-kit/core (decisión 9): SellerKanbanPage mide
+    // la posición real de la tarjeta y de la columna destino para calcular
+    // cuántas veces hace falta apretar la flecha — no un número fijo (mueve
+    // por píxeles, no por posición de lista, a diferencia de la galería de
+    // imágenes de 6.4).
+    await kanban.moveToColumn(PAGADO_ORDER_ID, "enviado");
 
     await expect(kanban.column("enviado").getByTestId(`kanban-card-${PAGADO_ORDER_ID}`)).toBeVisible();
   });

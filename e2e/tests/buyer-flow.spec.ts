@@ -23,7 +23,10 @@ test("flujo comprador: buscar, agregar al carrito y comprar", async ({ page, log
 
   await test.step("filtra 'Laptops' -> el grid solo muestra laptops", async () => {
     await catalog.gotoCategory("laptops");
-    await expect(page.getByRole("heading", { name: "Laptops" })).toBeVisible();
+    // El <h1> depende de useCategories() (fetch client-side, sin datos de
+    // SSR): en un runner más lento puede tardar más que el timeout default
+    // de 5s en pasar de "Categoría" (fallback) al nombre real.
+    await expect(page.getByRole("heading", { name: "Laptops" })).toBeVisible({ timeout: 10000 });
     await expect(catalog.productLink(LAPTOP_TITLE)).toBeVisible();
   });
 

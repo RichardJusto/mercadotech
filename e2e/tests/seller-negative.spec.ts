@@ -2,8 +2,6 @@ import { test, expect } from "../fixtures/test";
 import { SellerKanbanPage } from "../pages/SellerKanbanPage";
 
 const PAGADO_ORDER_ID = "d0000000-0000-0000-0000-000000000002";
-// Mismo valor determinado empíricamente en seller-flow.spec.ts.
-const ARROW_PRESSES_TO_CROSS_COLUMN = 20;
 
 test("buyer1 no puede entrar al panel de vendedor", async ({ page, loginAsBuyer1 }) => {
   await loginAsBuyer1();
@@ -37,19 +35,13 @@ test("mover un pedido enviado de vuelta a pagado: la UI lo rechaza y la tarjeta 
       .getByTestId(`kanban-card-${PAGADO_ORDER_ID}`)
       .isVisible();
     if (!yaEnviado) {
-      await kanban.moveRightByKeyboard(PAGADO_ORDER_ID, ARROW_PRESSES_TO_CROSS_COLUMN);
+      await kanban.moveToColumn(PAGADO_ORDER_ID, "enviado");
     }
     await expect(kanban.column("enviado").getByTestId(`kanban-card-${PAGADO_ORDER_ID}`)).toBeVisible();
   });
 
   await test.step("intenta retroceder enviado -> pagado: se rechaza", async () => {
-    const card = kanban.card(PAGADO_ORDER_ID);
-    await card.focus();
-    await page.keyboard.press("Space");
-    for (let i = 0; i < ARROW_PRESSES_TO_CROSS_COLUMN; i++) {
-      await page.keyboard.press("ArrowLeft");
-    }
-    await page.keyboard.press("Space");
+    await kanban.moveToColumn(PAGADO_ORDER_ID, "pagado");
 
     await expect(page.getByText("Solo puedes avanzar el pedido un paso a la vez.")).toBeVisible();
     await expect(kanban.column("enviado").getByTestId(`kanban-card-${PAGADO_ORDER_ID}`)).toBeVisible();
