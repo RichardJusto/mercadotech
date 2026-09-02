@@ -29,22 +29,22 @@ insert into auth.users (
   created_at, updated_at
 ) values
   ('00000000-0000-0000-0000-000000000000', '11111111-1111-1111-1111-111111111111', 'authenticated', 'authenticated',
-   'buyer1@mercadotech.test', crypt('MercadoTech123!', gen_salt('bf')), now(), '', '', '', '',
+   'buyer1@mercadotech.test', extensions.crypt('MercadoTech123!', extensions.gen_salt('bf')), now(), '', '', '', '',
    '{"provider":"email","providers":["email"]}', '{"display_name":"Ana Torres"}', now() - interval '90 days', now()),
   ('00000000-0000-0000-0000-000000000000', '22222222-2222-2222-2222-222222222222', 'authenticated', 'authenticated',
-   'buyer2@mercadotech.test', crypt('MercadoTech123!', gen_salt('bf')), now(), '', '', '', '',
+   'buyer2@mercadotech.test', extensions.crypt('MercadoTech123!', extensions.gen_salt('bf')), now(), '', '', '', '',
    '{"provider":"email","providers":["email"]}', '{"display_name":"Carlos Medina"}', now() - interval '80 days', now()),
   ('00000000-0000-0000-0000-000000000000', '33333333-3333-3333-3333-333333333333', 'authenticated', 'authenticated',
-   'buyer3@mercadotech.test', crypt('MercadoTech123!', gen_salt('bf')), now(), '', '', '', '',
+   'buyer3@mercadotech.test', extensions.crypt('MercadoTech123!', extensions.gen_salt('bf')), now(), '', '', '', '',
    '{"provider":"email","providers":["email"]}', '{"display_name":"Lucía Fernández"}', now() - interval '70 days', now()),
   ('00000000-0000-0000-0000-000000000000', '44444444-4444-4444-4444-444444444444', 'authenticated', 'authenticated',
-   'seller1@mercadotech.test', crypt('MercadoTech123!', gen_salt('bf')), now(), '', '', '', '',
+   'seller1@mercadotech.test', extensions.crypt('MercadoTech123!', extensions.gen_salt('bf')), now(), '', '', '', '',
    '{"provider":"email","providers":["email"]}', '{"display_name":"TechZone Perú"}', now() - interval '120 days', now()),
   ('00000000-0000-0000-0000-000000000000', '55555555-5555-5555-5555-555555555555', 'authenticated', 'authenticated',
-   'seller2@mercadotech.test', crypt('MercadoTech123!', gen_salt('bf')), now(), '', '', '', '',
+   'seller2@mercadotech.test', extensions.crypt('MercadoTech123!', extensions.gen_salt('bf')), now(), '', '', '', '',
    '{"provider":"email","providers":["email"]}', '{"display_name":"Digital World"}', now() - interval '110 days', now()),
   ('00000000-0000-0000-0000-000000000000', '66666666-6666-6666-6666-666666666666', 'authenticated', 'authenticated',
-   'admin@mercadotech.test', crypt('MercadoTech123!', gen_salt('bf')), now(), '', '', '', '',
+   'admin@mercadotech.test', extensions.crypt('MercadoTech123!', extensions.gen_salt('bf')), now(), '', '', '', '',
    '{"provider":"email","providers":["email"]}', '{"display_name":"Admin MercadoTech"}', now() - interval '150 days', now());
 
 insert into auth.identities (user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
