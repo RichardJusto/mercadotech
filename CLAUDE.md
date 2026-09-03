@@ -1,8 +1,9 @@
 # CLAUDE.md — MercadoTech
 
-Guía operativa para Claude Code en este repo. El plan completo del proyecto
-(8 sesiones) está en [README.md](README.md); la spec detallada de la sesión
-activa está en `MercadoTech_sesionN.md`.
+Guía operativa para Claude Code en este repo. [`README.md`](README.md) es
+la documentación de PRODUCTO (desde la Sesión 7); el plan completo del
+proyecto (8 sesiones) vive en [`docs/PLAN_CURSO.md`](docs/PLAN_CURSO.md), y
+la spec detallada de la sesión activa está en `MercadoTech_sesionN.md`.
 
 ## Stack
 
@@ -215,24 +216,78 @@ Reglas derivadas:
   (`npx @modelcontextprotocol/inspector --cli <comando> --method <m>`),
   no con `--web`: no requiere navegador y es scripteable.
 
+## Convenciones de Despliegue (desde la Sesión 7)
+
+- **`main` está protegida — CUALQUIER cambio pasa por Pull Request**, un
+  `git push` directo se rechaza incluso desde línea de comandos
+  (`GH006: Protected branch update failed`). Flujo: rama nueva → commit →
+  push → PR en GitHub (lo crea el usuario, no hay sesión de GitHub
+  autenticada disponible para crearlo por API) → esperar `checks` + `e2e`
+  en verde → el usuario mergea → sincronizar `main` local
+  (`git checkout main && git pull`) antes de seguir trabajando.
+- **Pushear cada commit apenas se hace, no acumular varios antes de
+  pushear** — un commit local que no llegó a `origin/main` antes de
+  crear una rama nueva termina arrastrado sin querer al próximo PR
+  (bug real de la Fase 7.4, inofensivo esa vez pero confuso al revisar
+  el diff).
+- **Dos proyectos de Supabase, nunca confundirlos**: uno LOCAL (Docker,
+  `.env.local`, seed de laboratorio con usuarios de contraseña conocida)
+  para desarrollo, y uno HOSTED (producción, `supabase/seed.prod.sql` —
+  sin usuarios, sin productos, catálogo vacío a propósito) para
+  `mercadotech-one.vercel.app`. El local se resetea libremente
+  (`supabase db reset`); el hosted solo se toca con `supabase db push`
+  (migraciones) o el SQL Editor del dashboard (seed de producción) —
+  nunca con `db reset`.
+- **Los valores de secretos no deberían pasar por el chat** (regla de oro
+  de `docs/DEPLOY.md`) — la vía preferida es que el usuario los pegue
+  directo en la interfaz de Vercel/Supabase. Cuando una tarea puntual
+  realmente lo exige (ej. correr `scripts/index-all.ts` contra producción,
+  confirmar un usuario por la Admin API) y no hay otra vía funcional,
+  tratarlos con el mismo cuidado que un token de proveedor de IA: nunca
+  ecoarlos en la salida, nunca escribirlos a un archivo del repo, usarlos
+  solo inline como variable de entorno de ese comando puntual.
+- **`NEXT_PUBLIC_*` se inlinea en el momento del BUILD**, no se lee en
+  caliente — cambiar una variable en Vercel sin hacer Redeploy después dejó
+  la app en producción apuntando a Supabase local por un rato (incidente
+  real de la Fase 7.4). Después de cualquier cambio de variables:
+  Redeploy, siempre.
+- **Medir performance SIEMPRE contra build de producción**
+  (`npm run build && npm run start`, o la URL real de Vercel) — nunca
+  contra `next dev`, que da números de Lighthouse falsos.
+
 ## Estado actual
 
-Sesión 6 completa (Fases 6.1–6.8): suite Vitest (unitarios de
-`services/`/`lib/`), suite Playwright E2E (flujos comprador, vendedor y
-sus negativos, con usuarios de prueba reales contra Supabase local) y
-pipeline de CI en GitHub Actions (`.github/workflows/ci.yml`, jobs
-`checks` + `e2e`) verificado en verde en `push` y `pull_request` contra el
-repo real. Tres bugs reales de CI encontrados y corregidos (exclusión de
-`mcp/` en el `tsconfig.json` raíz, flakiness de teclado en el kanban,
-race de timing en un fetch client-side) — documentados como casos reales
-en [`docs/DEBUGGING.md`](docs/DEBUGGING.md). El gate de
-`mercadotech-automatic-validator` ahora incluye `npm run test` (obligatorio)
-y los E2E cuando el stack local está arriba.
+Sesión 7 completa (Fases 7.2–7.5): app desplegada en producción real —
+[mercadotech-one.vercel.app](https://mercadotech-one.vercel.app) — sobre
+un proyecto Supabase hosted migrado y sembrado con `seed.prod.sql`
+(catálogo vacío a propósito, sin usuarios de laboratorio). `main`
+protegida por Pull Request + CI verde, verificado con dos PRs de humo
+reales (push directo rechazado, merge bloqueado con CI en curso, producción
+actualizada al mergear). Performance medida contra build de producción con
+Lighthouse (`docs/PERFORMANCE.md`) — el objetivo ≥90 en home/catálogo no
+se alcanzó (72/74) por una causa raíz documentada (fetch client-side que
+retrasa el LCP) fuera del alcance autorizado de la sesión, dejado como
+recomendación para el futuro en vez de forzado. Documentación completa:
+`README.md` de producto, `docs/PLAN_CURSO.md` (plan original preservado),
+`docs/ARQUITECTURA.md` ampliado con las 5 sesiones posteriores a la 2, y
+`docs/DEPLOY.md` con gobernanza de secretos, flujo de despliegue, smoke
+test y plan de rollback.
 
-Sesión 5: 4 Skills de gobernanza commiteadas, servidor MCP (`mcp/`) con 10
-Tools + 7 Resources + 5 Prompts registrado en `.mcp.json`, y el lab de la
-Fase 5.6 con [`docs/REVISION_S5.md`](docs/REVISION_S5.md) en VALIDACIÓN
-APROBADA.
+Sesión 6: suite Vitest (unitarios de `services/`/`lib/`), suite Playwright
+E2E (flujos comprador, vendedor y sus negativos, con usuarios de prueba
+reales contra Supabase local) y pipeline de CI en GitHub Actions
+(`.github/workflows/ci.yml`, jobs `checks` + `e2e`) verificado en verde en
+`push` y `pull_request` contra el repo real. Tres bugs reales de CI
+encontrados y corregidos (exclusión de `mcp/` en el `tsconfig.json` raíz,
+flakiness de teclado en el kanban, race de timing en un fetch
+client-side) — documentados en [`docs/DEBUGGING.md`](docs/DEBUGGING.md).
+El gate de `mercadotech-automatic-validator` incluye `npm run test`
+(obligatorio) y los E2E cuando el stack local está arriba.
+
+Sesión 5: 7 Skills de gobernanza commiteadas (4 iniciales + 3 agregadas
+tras la Sesión 6: RAG, E2E, RLS), servidor MCP (`mcp/`) con 10 Tools + 7
+Resources + 5 Prompts registrado en `.mcp.json`, y el lab de la Fase 5.6
+con [`docs/REVISION_S5.md`](docs/REVISION_S5.md) en VALIDACIÓN APROBADA.
 
 Sesión 4: infraestructura vectorial (pgvector, `knowledge_embeddings`, RPC
 `match_knowledge`), indexación automática al publicar/editar/eliminar
@@ -242,8 +297,8 @@ tickets"). Los 6 casos de prueba del RAG y la calibración de thresholds
 están documentados en [`docs/RAG.md`](docs/RAG.md).
 
 Ver [`docs/BITACORA.md`](docs/BITACORA.md) para el registro detallado por
-fase (Sesiones 2–6) y [`docs/SESION3_CHECKLIST.md`](docs/SESION3_CHECKLIST.md)
-para la pasada de calidad de la Sesión 3. Pendiente: Sesiones 7–8 del plan
-(ver [README.md](README.md); la sesión 8 amplía `/soporte` con voz, ya con
-el layout preparado para el botón de micrófono, y reutiliza la tool MCP
-`get_order_status`).
+fase (Sesiones 2–7) y [`docs/SESION3_CHECKLIST.md`](docs/SESION3_CHECKLIST.md)
+para la pasada de calidad de la Sesión 3. Pendiente: Sesión 8 del plan
+(ver [`docs/PLAN_CURSO.md`](docs/PLAN_CURSO.md); amplía `/soporte` con voz,
+ya con el layout preparado para el botón de micrófono, y reutiliza la tool
+MCP `get_order_status`).

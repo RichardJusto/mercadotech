@@ -520,3 +520,137 @@ desde un run verde, drag & drop cubierto por E2E de teclado real.
   probar el trigger `pull_request`) antes de borrarla — `git branch -d`
   (no `-D`) se niega si hay commits no mergeados, lo cual es la señal para
   pausar y cherry-pickear en vez de forzar el borrado.
+
+## Sesión 7 — Performance, Secretos y Despliegue en Vercel
+
+**Estado al cierre**: Fases 7.2–7.5 completas. App desplegada en
+producción real (`mercadotech-one.vercel.app`) sobre un proyecto Supabase
+hosted separado del de desarrollo local, `main` protegida por Pull
+Request + CI verde, y el flujo completo demostrado contra el repositorio
+real (no en teoría) con dos PRs de humo. Documentación final: `README.md`
+de producto, `docs/PLAN_CURSO.md`, `docs/ARQUITECTURA.md` ampliado con las
+sesiones 3–7, y `docs/DEPLOY.md` completo con rollback.
+
+### Fase 7.2 — Performance
+
+Medición Lighthouse móvil (antes/después) contra build de producción real
+(nunca `next dev`), documentada en `docs/PERFORMANCE.md`. Aplicados los
+tres únicos candidatos autorizados por la spec: `dynamic import` de
+`OrdersKanban` (-12KB First Load) y de `SortableImageGallery` (-20/-21KB
+en las dos rutas más pesadas del sitio), más `sizes`/`priority` correctos
+en las imágenes above-the-fold. `ChatWindow` se evaluó y se descartó: no
+importa ninguna dependencia pesada, ya era la ruta más liviana del sitio
+antes de tocar nada — documentado como "evaluado, no aplicado" en vez de
+forzar un cambio sin beneficio medible.
+
+**Objetivo Lighthouse ≥ 90 en home/catálogo NO alcanzado** (72 y 74). Causa
+raíz identificada con las propias auditorías de Lighthouse, no adivinada:
+el LCP depende de un fetch client-side que ocurre recién después de
+hidratar (`useProducts()` en un Client Component) — ninguna optimización
+de bundle o de atributos de imagen puede adelantar algo que todavía no
+existe en el DOM. El arreglo de fondo (mover ese fetch a un Server
+Component) es exactamente el tipo de cambio que esta sesión prohíbe
+("no introducir features nuevas"); queda documentado como recomendación
+concreta para una sesión futura, no forzado ahora con un cambio fuera de
+alcance.
+
+### Fase 7.3 — Gobernanza de secretos
+
+Tabla de gobernanza de las 6 variables de entorno en `docs/DEPLOY.md`
+(dónde vive cada una, quién la lee, pública o secreta) y greps anti-fuga
+corridos sobre el código fuente — sin fugas reales. Dos falsos positivos
+investigados y descartados: base64 de un screenshot de Lighthouse
+pareciéndose a un JWT por azar, y el archivo de estado local del CLI de
+Supabase (ya gitignoreado por el propio scaffold). `docs/lighthouse/`
+(reportes ~5MB con capturas embebidas) agregado a `.gitignore` — el
+resumen permanente vive en `PERFORMANCE.md`.
+
+### Fase 7.4 — Despliegue en Vercel con base de datos remota
+
+La fase con más pasos manuales del curso, y la que más hallazgos reales
+produjo. Proyecto Supabase de producción migrado con `supabase db push` y
+sembrado con `supabase/seed.prod.sql` (8 categorías + 10 FAQ reales, SIN
+usuarios ni productos — el catálogo de producción nace vacío a propósito,
+decisión de la spec). Vercel conectado por su integración nativa de Git,
+sin CLI ni tokens de deploy.
+
+**Cuatro hallazgos reales, cada uno con su fix documentado en
+`docs/DEPLOY.md`**:
+
+1. **`gen_salt`/`crypt` (pgcrypto) sin calificar de esquema** rompían el
+   seed contra el proyecto hosted (`function gen_salt(unknown) does not
+   exist`) aunque funcionaban perfecto en local — el stack local de
+   Supabase trae `extensions` en el `search_path` por convención propia
+   que el hosted no hereda. Fix: `extensions.crypt(...)` explícito.
+2. **`support_articles` se duplicó (20 filas en vez de 10)** la primera
+   vez que se aplicó `seed.prod.sql` sobre una base que ya tenía el seed
+   de laboratorio: su `id` es autogenerado, así que reinsertar el mismo
+   contenido crea filas nuevas en vez de chocar por clave primaria —a
+   diferencia de `categories`, que usa IDs fijos. Se agregó `truncate` al
+   script de limpieza antes de re-sembrar.
+3. **Un usuario creado ANTES de desactivar "Confirm email" queda
+   confirmado para siempre** — la desactivación no es retroactiva.
+   Resuelto con la Admin API (`auth.admin.updateUserById(id, {
+   email_confirm: true })`) en vez de perseguir el reenvío del correo.
+4. **El proveedor de email gratuito de Supabase tiene un límite de envío
+   muy bajo** (~2-4/hora) — varios registros seguidos dispararon `email
+   rate limit exceeded`.
+
+Smoke test completo contra producción real (no un preview): registro
+como vendedor, login, catálogo vacío esperado, publicar producto demo con
+imagen, aparece en el catálogo público, y el asistente de `/soporte`
+respondiendo y citando la FAQ real indexada — las 5 fuentes correctas.
+
+**Branch protection verificado con dos PRs de humo reales**: push directo
+a `main` rechazado (`GH006: Protected branch update failed`) incluso desde
+línea de comandos; `mergeable_state` de la API de GitHub pasando de
+`"unstable"` (CI en curso, botón de merge deshabilitado) a `"clean"` (CI
+verde, merge habilitado); producción reflejando el cambio del footer
+segundos después del merge, confirmado leyendo el DOM en vivo. Hallazgo
+real de configuración: la sub-opción "Require approvals" (activada por
+defecto al tildar "Require a pull request before merging") bloquea a un
+repo de un solo colaborador — se desactivó, dejando solo lo que la spec
+pide.
+
+### Fase 7.5 — Documentación final
+
+`README.md` pasa a ser documentación de PRODUCTO (arquitectura en una
+imagen, flujo RAG, puesta en marcha local paso a paso, testing con su
+prerrequisito, CI/CD y deploy, estructura del proyecto); el plan original
+de las 8 sesiones del curso se preserva intacto en `docs/PLAN_CURSO.md`
+(decisión 11 de la spec — ambos documentos tienen valor propio, distinto
+público). `docs/ARQUITECTURA.md` ampliado con las secciones 9–13 (una por
+sesión posterior a la 2), enlazando a `RAG.md`/`DEBUGGING.md`/
+`mcp/README.md` en vez de reexplicarlos, y corrigiendo datos que habían
+quedado desactualizados (conteo de migraciones 19→25, estructura de
+carpetas que todavía decía "vacío hasta sesión 3"). `docs/DEPLOY.md`
+completado con el plan de rollback: qué SÍ revierte un rollback de Vercel
+(código, env vars del build) y qué NO (la base de datos — las migraciones
+nunca se deshacen con un clic, necesitan una migración nueva).
+
+### Decisiones/hallazgos que valen para sesiones futuras
+
+- **Un objetivo de performance no alcanzado, documentado con su causa
+  raíz real, vale más que forzar un número.** La tentación ante un
+  Lighthouse de 72 es "optimizar más hasta llegar a 90" — pero si la causa
+  real excede el alcance autorizado de la sesión, la honestidad técnica es
+  dejarlo documentado con el POR QUÉ y la recomendación concreta, no
+  maquillar el síntoma con cambios fuera de alcance.
+- **Una vez que `main` tiene branch protection, CUALQUIER cambio —
+  incluidos los de documentación— necesita pasar por PR.** Un `git push`
+  directo a main después de esta sesión siempre va a ser rechazado; el
+  flujo (rama → push → PR → CI verde → merge) es ahora la única vía, sin
+  excepciones para "es solo un typo en un doc".
+- **Un `git commit` local no es lo mismo que tenerlo en `origin/main`.**
+  Un olvido real de esta sesión: se comitearon localmente 3 fases
+  completas de trabajo sin pushearlas antes de crear una rama nueva desde
+  ahí — la rama nueva terminó trayendo ese trabajo pendiente al PR de
+  prueba (inofensivo en este caso, porque era trabajo legítimo, pero
+  confuso al revisar el diff). Conviene pushear main inmediatamente
+  después de cada commit, no acumular varios antes de pushear.
+- **Una desactivación de una opción de Supabase Auth (o cualquier
+  configuración similar) nunca es retroactiva para estado ya creado bajo
+  la configuración vieja.** Si algo se creó (un usuario, un registro)
+  mientras una regla estaba activa, cambiar la regla después no lo altera
+  — hay que corregir ese estado puntual aparte (Admin API, SQL directo),
+  no asumir que el cambio de configuración alcanza.
