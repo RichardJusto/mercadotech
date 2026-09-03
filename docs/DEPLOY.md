@@ -167,3 +167,42 @@ un preview):
 | Favicon | ✅ (heredado del layout raíz, sin cambios de esta sesión) |
 
 **Veredicto: smoke test completo, sin hallazgos pendientes.**
+
+## 4. Branch protection y flujo PR → producción
+
+Regla en GitHub (`Settings → Branches → main`): **Require a pull request
+before merging** + **Require status checks to pass before merging**
+(`checks`, `e2e`) + **Do not allow bypassing the above settings**.
+
+### Hallazgo real: "Require approvals" bloquea a un solo desarrollador
+
+La sub-opción "Require approvals" (activada por defecto al tildar "Require
+a pull request before merging") exige al menos 1 aprobación de alguien con
+permiso de escritura — en un repo con un único colaborador, nadie más
+existe para aprobar, y ni siquiera queda claro que el propio dueño pueda
+autoaprobarse de forma confiable desde la UI (una revisión enviada como
+"Comment" en vez de "Approve" no cuenta, y es fácil confundir los dos
+botones). Se desactivó esa sub-opción específica, dejando activo solo lo
+que la spec pide: PR obligatorio + status checks verdes.
+
+### Prueba de fuego (rama `deploy-smoke`, PR #3)
+
+Cambio trivial y visible (texto del footer) sobre una rama nueva:
+
+1. **Push directo a `main` rechazado** incluso desde línea de comandos:
+   `remote: error: GH006: Protected branch update failed` — confirma que
+   el candado protege más que el botón de merge del PR, también bloquea
+   `git push` directo.
+2. **PR abierto** → aparecen los checks (`checks`, `e2e`) corriendo y el
+   comentario/check de Vercel con el preview.
+3. **Mientras el CI corre**: `mergeable_state: "unstable"` (API de GitHub)
+   y el botón de merge deshabilitado en la UI — bloqueado en rojo,
+   confirmado.
+4. **Al terminar el CI en verde**: `mergeable_state` pasa a `"clean"`,
+   botón de merge habilitado — permitido en verde, confirmado.
+5. **Merge** → Vercel redespliega producción automáticamente. El footer de
+   `mercadotech-one.vercel.app` refleja el cambio pocos segundos después
+   del merge, confirmado leyendo el DOM en vivo.
+
+**Veredicto: candado + flujo completo verificados de punta a punta contra
+el repositorio y el despliegue reales, no en teoría.**
