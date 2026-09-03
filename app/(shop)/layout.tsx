@@ -6,6 +6,7 @@
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { Container } from "@/components/shared/Container";
+import { SupportWidget } from "@/components/chat/SupportWidget";
 import { useAuth } from "@/hooks/useAuth";
 import { useCategories } from "@/hooks/useCategories";
 import { useCart } from "@/hooks/useCart";
@@ -33,6 +34,7 @@ export default function ShopLayout({ children }: { children: React.ReactNode }) 
       <footer className="relative border-t py-6 text-center text-sm text-muted-foreground before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-glow before:to-transparent before:opacity-40">
         <Container>© {new Date().getFullYear()} MercadoTech · Desplegado en Vercel</Container>
       </footer>
+      {user ? <SupportWidget /> : null}
     </div>
   );
 }

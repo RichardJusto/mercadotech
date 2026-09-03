@@ -5,6 +5,7 @@ import { ChatMessage } from "@/components/chat/ChatMessage";
 import { LoadingMessage } from "@/components/chat/LoadingMessage";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { cn } from "@/lib/utils";
 import type { DisplayChatMessage } from "@/hooks/useChat";
 
 interface ChatWindowProps {
@@ -15,6 +16,9 @@ interface ChatWindowProps {
   emptyTitle: string;
   emptyDescription: string;
   suggestions?: string[];
+  // Default h-[70vh] para las páginas completas (/asistente, /soporte); el
+  // widget flotante pasa una altura fija más chica.
+  className?: string;
 }
 
 export function ChatWindow({
@@ -25,6 +29,7 @@ export function ChatWindow({
   emptyTitle,
   emptyDescription,
   suggestions,
+  className,
 }: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -33,7 +38,7 @@ export function ChatWindow({
   }, [messages, loading]);
 
   return (
-    <div className="flex h-[70vh] flex-col rounded-lg border">
+    <div className={cn("flex h-[70vh] flex-col rounded-lg border", className)}>
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <EmptyState
