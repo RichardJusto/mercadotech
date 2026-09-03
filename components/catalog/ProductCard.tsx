@@ -10,9 +10,14 @@ interface ProductCardProps {
   // Solo lo pasa la pestaña "Resultados con IA" de /buscar (Fase 4.4):
   // porcentaje de parecido semántico con la consulta, 0–1.
   similarity?: number;
+  // Fase 7.2: ProductGrid lo pasa en true para las primeras tarjetas
+  // (above-the-fold en cualquier grid — home, categoría, búsqueda) para que
+  // Next.js precargue esa imagen en vez de esperar a que el navegador la
+  // descubra — es la imagen que mide "largest-contentful-paint" en Lighthouse.
+  priority?: boolean;
 }
 
-export function ProductCard({ product, similarity }: ProductCardProps) {
+export function ProductCard({ product, similarity, priority = false }: ProductCardProps) {
   return (
     <Link
       href={`/producto/${product.id}`}
@@ -28,6 +33,12 @@ export function ProductCard({ product, similarity }: ProductCardProps) {
         alt={product.title}
         width={300}
         height={300}
+        // Coincide con las columnas reales del grid (grid-cols-1/2/3/4 en
+        // components/catalog/ProductGrid.tsx) — sin esto Next.js no sabe qué
+        // tamaño de srcset servir y termina mandando la imagen más grande a
+        // todos los viewports.
+        sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+        priority={priority}
         className="aspect-square w-full object-cover"
       />
       <div className="flex flex-1 flex-col gap-1.5 p-3">
