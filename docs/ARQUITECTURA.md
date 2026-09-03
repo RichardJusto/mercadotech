@@ -1,9 +1,14 @@
 # Arquitectura de MercadoTech
 
-Documento técnico de la infraestructura construida en la Sesión 2
-(`MercadoTech_sesion2.md`, Fases 2.1–2.7). Cubre el proyecto Next.js 15, el
-esquema de base de datos, RLS, Storage, seed y validación. **No incluye**
-pantallas, hooks ni servicios de negocio — eso es la Sesión 3.
+Documento técnico de la arquitectura real del proyecto, sesiones 2 a 7.
+Las secciones 1–8 documentan la infraestructura de datos construida en la
+Sesión 2 (`MercadoTech_sesion2.md`) — base de datos, RLS, Storage, seed y
+validación —, y siguen siendo la fuente de verdad de esa capa. Las
+secciones 9–13 suman lo que cada sesión posterior agregó encima: frontend
+(3), IA/RAG (4), Skills + MCP (5), testing/CI (6) y despliegue (7). Donde
+el código actual difiere de lo que describe alguna spec de sesión, este
+documento describe el código real, con una nota — nunca el plan original
+sin verificar.
 
 ---
 
@@ -51,42 +56,54 @@ Reglas derivadas (ver `CLAUDE.md` para el detalle completo):
 
 ## 2. Organización de carpetas
 
+Estructura real del repositorio al cierre de la Sesión 7 (no la planeada —
+la construida):
+
 ```
 MercadoTech/
 ├── app/
-│   ├── (auth)/                  # login, register — sesión 3
-│   ├── (shop)/                  # catálogo, producto, carrito, pedidos — sesión 3
-│   ├── (seller)/                # panel del vendedor — sesión 3
-│   └── api/v1/                  # solo lo server-only — sesiones 3-4
-├── components/                  # presentación pura (vacío hasta sesión 3)
-├── hooks/                       # estado de cliente (vacío hasta sesión 3)
-├── services/                    # lógica de negocio (vacío hasta sesión 3)
+│   ├── (auth)/                  # login, register — layout con panel de showcase (S3/S7)
+│   ├── (shop)/                  # catálogo, producto, carrito, pedidos, asistente, soporte
+│   ├── (seller)/                # panel del vendedor (productos, publicar, kanban de pedidos)
+│   └── api/v1/                  # chat, reindex, búsqueda semántica — solo lo server-only
+├── components/                  # presentación pura, por dominio (catalog/, cart/, chat/, seller/, ui/...)
+├── hooks/                       # estado de cliente (useAuth, useCart, useChat, useProducts...)
+├── services/                    # lógica de negocio, cliente Supabase inyectable
 ├── lib/
 │   ├── supabase/
 │   │   ├── client.ts             # browser, NEXT_PUBLIC_SUPABASE_ANON_KEY
 │   │   ├── server.ts             # server, cookies, respeta RLS
 │   │   ├── middleware.ts         # refresco de sesión (patrón @supabase/ssr)
 │   │   └── admin.ts              # service role, BYPASEA RLS, solo servidor
-│   ├── validators/               # validación framework-agnóstica (sesión 3)
-│   ├── constants/
-│   │   └── roles.ts              # roles y estados de dominio
-│   ├── ai/                       # sesión 4
-│   ├── voice/                    # sesión 8
-│   └── utils.ts                  # cn() de shadcn/ui
+│   ├── validators/               # validación framework-agnóstica
+│   ├── constants/                # tunables documentados (roles, catálogo, IA, producto)
+│   ├── ai/                       # Sesión 4 — únicos archivos que hablan con Hugging Face
+│   ├── voice/                    # Sesión 8 (pendiente)
+│   └── utils.ts                  # cn(), formatPrice()
 ├── types/                        # tipos de dominio + database.ts (generado)
 ├── supabase/
-│   ├── migrations/                # 19 migraciones, fuente de verdad del esquema
-│   ├── schema.sql                 # referencia — NO fuente de verdad
-│   ├── policies.sql               # referencia — NO fuente de verdad
-│   ├── seed.sql                   # datos de prueba
-│   ├── tests/
-│   │   └── rls-validation.sql     # validación de políticas RLS
+│   ├── migrations/                # 25 migraciones, fuente de verdad del esquema
+│   ├── seed.sql                   # datos de LABORATORIO (usuarios de prueba, productos falsos)
+│   ├── seed.prod.sql              # datos de PRODUCCIÓN (categorías + FAQ, sin usuarios/productos)
+│   ├── tests/rls-validation.sql   # validación de políticas RLS
 │   └── config.toml
+├── mcp/                          # Sesión 5 — servidor MCP (proceso Node aparte), ver mcp/README.md
+├── e2e/                          # Sesión 6 — specs y Page Objects de Playwright
+├── scripts/                      # index-all.ts (indexación manual del RAG)
+├── .claude/skills/                # Sesión 5+ — 7 Skills de gobernanza, ver §11
+├── .github/workflows/ci.yml       # Sesión 6 — checks + e2e, requisito de merge desde la S7
 ├── middleware.ts                  # raíz, usa lib/supabase/middleware.ts
 ├── .env.example
 ├── CLAUDE.md
+├── README.md                      # documentación de producto (Sesión 7)
 └── docs/
-    └── ARQUITECTURA.md            # este documento
+    ├── ARQUITECTURA.md            # este documento
+    ├── RAG.md                     # Sesión 4 — casos de prueba y calibración del RAG
+    ├── DEBUGGING.md                # Sesión 6 — metodología y errores típicos
+    ├── PERFORMANCE.md              # Sesión 7 — Core Web Vitals antes/después
+    ├── DEPLOY.md                   # Sesión 7 — secretos, despliegue, rollback
+    ├── BITACORA.md                 # registro acumulativo por sesión
+    └── PLAN_CURSO.md               # el plan original de las 8 sesiones (histórico)
 ```
 
 ---
@@ -232,8 +249,16 @@ independiente para el RAG de soporte de la Sesión 4.
 | 11–17 | `create_questions` … `create_ticket_messages` | resto de tablas |
 | 18 | `rls_policies` | `is_admin()`, `order_has_seller_item()`, `order_belongs_to_buyer()`, 34 políticas, GRANTs |
 | 19 | `storage_buckets` | buckets `product-images`/`avatars` + políticas |
+| 20 | `handle_new_user_metadata` | Sesión 3 — trigger lee `role`/`display_name` de `raw_user_meta_data`, nunca acepta `'admin'` desde el registro |
+| 21 | `enable_pgvector` | Sesión 4 — extensión `pgvector` |
+| 22 | `create_knowledge_embeddings` | Sesión 4 — `vector(384)`, índice HNSW coseno |
+| 23 | `create_match_knowledge` | Sesión 4 — RPC de búsqueda semántica |
+| 24 | `knowledge_embeddings_rls` | Sesión 4 — `SELECT` solo `authenticated` |
+| 25 | `grant_service_role` | Sesión 4 — fix de un gap heredado de la Fase 2.3: `service_role` no tenía GRANT de tabla; ver §5 |
 
-Reconstruible desde cero con `supabase db reset` (migraciones + `seed.sql`).
+Reconstruible desde cero con `supabase db reset` (migraciones + `seed.sql`
+para desarrollo local; en producción, `seed.prod.sql` — ver
+[`docs/DEPLOY.md`](./DEPLOY.md)).
 
 ---
 
@@ -421,3 +446,96 @@ propia transacción con `ROLLBACK` — no muta el seed. Se corre con
 `docker exec -i <contenedor_postgres> psql -U postgres -d postgres -f
 supabase/tests/rls-validation.sql` (el subcomando `supabase db query` no
 soporta scripts multi-statement con `BEGIN`/bloques `DO`/`ROLLBACK`).
+
+---
+
+## 9. Frontend (Sesión 3)
+
+UI completa sobre shadcn/ui, con una particularidad que condiciona cada
+componente interactivo del proyecto: **este `shadcn/ui` corre sobre
+`@base-ui/react`, no sobre Radix.** La composición polimórfica se hace con
+la prop `render` (`<DialogTrigger render={<Button>Abrir</Button>} />`),
+nunca con `asChild`. `<Select.Value />` tampoco resuelve la etiqueta sola:
+necesita una función `children` que mapee `value → label` explícitamente —
+un bug sistemático real de la Fase 3.8, repetido varias veces antes de
+documentarse como convención (ver `CLAUDE.md`, "Convenciones de UI").
+
+- **Layouts** por grupo de rutas: `(auth)`, `(shop)`, `(seller)` — cada uno
+  con su propio navbar/sidebar, componentes puros sin fetching.
+- **Drag & drop** con `@dnd-kit`: galería de imágenes del vendedor
+  (`@dnd-kit/sortable`, reorden por índice) y kanban de pedidos
+  (`@dnd-kit/core`, `KeyboardSensor` habilitado, movimiento por píxeles —
+  ver §12 para el hallazgo real de cómo se testea esto en CI).
+- **Snapshots, no precios en vivo.** Cualquier pantalla que muestre un
+  pedido ya creado lee `order_items.price_snapshot`/`title_snapshot`
+  (§4), nunca el precio actual del producto.
+
+## 10. IA y RAG (Sesión 4)
+
+Pipeline completo: búsqueda semántica en el catálogo, asistente de compras
+(`/asistente`) y de soporte (`/soporte`, con base de FAQ). Detalle
+completo, los 6 casos de prueba y la calibración de thresholds en
+[`docs/RAG.md`](./RAG.md) — no se repite acá.
+
+Dos decisiones de esta capa que vale tener presentes sin ir al documento
+completo:
+
+- **Dos mecanismos de Hugging Face, a propósito.** `lib/ai/embeddings.ts`
+  usa el SDK (`InferenceClient.featureExtraction`); `lib/ai/completion.ts`
+  usa `fetch` crudo al router OpenAI-compatible. No se unifican — mezclar
+  ambos fue fuente de errores confusos en el proyecto de referencia.
+- **`lib/ai/` es la única capa que conoce al proveedor.** La UI llega a la
+  IA solo por `hook → fetch a /api/v1/* → service → lib/ai/` — verificado
+  con un grep que debe dar vacío (`CLAUDE.md`, "Convenciones de IA").
+
+## 11. Skills de gobernanza y servidor MCP (Sesión 5)
+
+**El servidor MCP (`mcp/`) es de solo lectura** y reutiliza `services/` y
+`lib/ai/` existentes — nunca reimplementa una consulta de negocio. Arma sus
+propios clientes Supabase por llamada (nunca singleton), cliente `anon` por
+defecto y `admin` solo donde la RLS real de la tabla lo exige. Detalle
+completo de las 10 Tools, 7 Resources y 5 Prompts en
+[`mcp/README.md`](../mcp/README.md).
+
+**7 Skills en `.claude/skills/`**, cada una con un rol distinto — no
+corren en la aplicación para el usuario final, son instrucciones que
+Claude Code sigue en momentos específicos de construir y revisar el
+código:
+
+| Skill | Cuándo actúa | Qué audita |
+|---|---|---|
+| `mercadotech-architecture-enforcer` | ANTES de escribir código nuevo | Ubicación/capa (§1) |
+| `mercadotech-code-reviewer` | DESPUÉS de escribir código | Calidad de dominio (RLS, snapshots, stock, pipeline RAG) |
+| `mercadotech-automatic-validator` | Al cerrar una tarea/fase | Gate binario: enforcer + críticos del reviewer + lint + type-check + test + E2E |
+| `mercadotech-tech-lead` | Decisiones de diseño/deuda técnica | Scorecard ponderado, no binario |
+| `mercadotech-rag-auditor` | Al tocar `lib/ai/` | Trampas específicas de HF/pgvector ya documentadas en `docs/RAG.md` |
+| `mercadotech-e2e-patterns` | Al escribir un test E2E | Patrones que ya rompieron CI (§12) |
+| `mercadotech-rls-auditor` | Al escribir una migración nueva | RLS habilitada, políticas completas, reglas que no deberían vivir solo del lado cliente |
+
+## 12. Testing y CI (Sesión 6)
+
+Vitest (`services/`, `lib/`, mocks del cliente Supabase, sin red) +
+Playwright (flujos E2E completos contra Supabase local real) + GitHub
+Actions (`checks` + `e2e`, sin secretos — corre contra un stack de
+Supabase efímero). Metodología de debugging y tabla de errores típicos
+completa en [`docs/DEBUGGING.md`](./DEBUGGING.md).
+
+Un hallazgo de esta capa que interactúa directo con §9: `playwright.config.ts`
+fija `workers: 1` **siempre**, no solo en CI — los specs comparten filas
+mutables del mismo seed entre archivos a propósito (el carrito de un mismo
+comprador, un mismo pedido que dos specs mueven por el kanban), así que
+solo son seguros corriendo en serie.
+
+## 13. Despliegue (Sesión 7)
+
+**URL de producción**: [mercadotech-one.vercel.app](https://mercadotech-one.vercel.app)
+
+Vercel conectado al repositorio por su integración nativa de Git (sin CLI,
+sin tokens de deploy en el workflow) sobre un proyecto Supabase hosted
+separado del de desarrollo local, migrado con `supabase db push` y
+sembrado con `supabase/seed.prod.sql` (catálogo vacío a propósito — nunca
+el seed de laboratorio). `main` protegida: solo se actualiza por Pull
+Request con `checks` y `e2e` en verde, sin excepción ni para push directo.
+Gobernanza de secretos, flujo completo de despliegue, smoke test y plan de
+rollback en [`docs/DEPLOY.md`](./DEPLOY.md); metodología y resultados de
+performance (Core Web Vitals) en [`docs/PERFORMANCE.md`](./PERFORMANCE.md).

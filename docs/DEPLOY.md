@@ -206,3 +206,58 @@ Cambio trivial y visible (texto del footer) sobre una rama nueva:
 
 **Veredicto: candado + flujo completo verificados de punta a punta contra
 el repositorio y el despliegue reales, no en teoría.**
+
+## 5. Rollback
+
+Cómo volver atrás cuando un deploy nuevo salió mal.
+
+### Cómo revertir el código
+
+1. Andá al dashboard de Vercel del proyecto → **Deployments**.
+2. Cada deploy de producción anterior queda listado, con su commit y
+   timestamp.
+3. Sobre el deploy BUENO (el anterior al que rompió algo) → botón `⋯` →
+   **"Promote to Production"** (en versiones más viejas del dashboard,
+   "Redeploy" cumple la misma función).
+4. Confirmá. Vercel vuelve a servir ESE build en la URL de producción de
+   inmediato — sin esperar un nuevo build, sin tocar GitHub.
+
+Es la vía rápida para "el sitio está roto, necesito que deje de estarlo
+YA". El código en `main` sigue teniendo el commit malo — corregirlo de
+verdad (revertir el PR o pushear el fix) es un paso aparte, sin la presión
+de estar con el sitio caído mientras tanto.
+
+### Qué SÍ revierte un rollback de Vercel
+
+- El código desplegado (el bundle de JS/HTML/CSS que sirve la URL de
+  producción) — vuelve exactamente al del deploy elegido.
+- Las variables de entorno **del momento en que ESE build se generó**
+  (Next.js las inlinea en build time — ver la Sección 1, "Cambiar una
+  variable en Vercel no afecta deploys ya hechos").
+
+### Qué NO revierte (y hay que manejar aparte)
+
+- **La base de datos.** Las migraciones de Supabase (`supabase db push`)
+  son cambios de esquema aplicados directamente al proyecto hosted — no
+  hay un "deploy anterior" de la base de datos al que volver con un clic.
+  Si una migración rompió algo:
+  - Si el problema es de DATOS (un seed mal aplicado, filas corruptas):
+    corregir a mano vía SQL Editor, o restaurar desde un backup de
+    Supabase si el plan lo incluye.
+  - Si el problema es de ESQUEMA (una migración con un bug real): escribir
+    una migración NUEVA que revierta el cambio — nunca editar ni borrar la
+    migración ya aplicada (regla del proyecto, ver `CLAUDE.md`).
+- **Archivos ya subidos a Storage** (imágenes de producto) — un rollback
+  de código no borra ni restaura lo que ya está en el bucket.
+- **Emails ya enviados** (confirmaciones, recuperación de contraseña) —
+  obviamente irreversibles, mencionado acá solo para que quede explícito
+  que un rollback de Vercel no tiene ningún efecto sobre ellos.
+
+### Cuándo usar cada vía
+
+| Situación | Qué hacer |
+|---|---|
+| El código nuevo rompió algo visible (UI, una función) | Rollback de Vercel — inmediato |
+| Una migración de esquema rompió algo | Migración nueva que revierte — no hay atajo |
+| Datos mal sembrados/corruptos | SQL Editor a mano, o backup si aplica |
+| Una env var mal cargada | Corregirla en Vercel → Redeploy (no es un "rollback", es una corrección hacia adelante) |
