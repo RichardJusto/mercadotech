@@ -18,6 +18,11 @@
 /playwright-report
 /test-results
 
+# reportes de Lighthouse (Fase 7.2): JSON/HTML pesados con screenshots en
+# base64 (~5MB) — el resumen permanente vive en docs/PERFORMANCE.md, no hace
+# falta versionar los reportes crudos
+/docs/lighthouse
+
 # next.js
 /.next/
 /out/

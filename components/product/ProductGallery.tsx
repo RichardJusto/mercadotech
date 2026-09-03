@@ -39,6 +39,12 @@ export function ProductGallery({ images, alt }: ProductGalleryProps) {
           alt={alt}
           width={600}
           height={600}
+          // Es el elemento LCP de /producto/[id] — coincide con el layout
+          // real (Container className="lg:grid-cols-2", app/(shop)/producto/
+          // [id]/page.tsx): mitad del ancho desde lg, ancho completo debajo
+          // (Fase 7.2).
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          priority
           className="aspect-square w-full rounded-lg object-cover"
         />
       </div>

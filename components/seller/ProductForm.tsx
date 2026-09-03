@@ -1,4 +1,5 @@
 import type { FormEvent } from "react";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SortableImageGallery } from "@/components/seller/SortableImageGallery";
 import { MAX_IMAGES_PER_PRODUCT } from "@/lib/constants/product";
 import { PRODUCT_CONDITIONS, type ProductCondition } from "@/lib/constants/roles";
 import type { FieldErrors } from "@/lib/validators/product";
@@ -34,6 +34,17 @@ interface ProductFormProps {
   onReorderImages: (images: GalleryImage[]) => void;
   onSubmit: () => void;
 }
+
+// @dnd-kit/core es pesado (~1.4MB sin minificar) y solo lo usan las dos
+// pantallas que renderizan este form — dynamic import lo saca del bundle
+// inicial de /vendedor/publicar y /vendedor/productos/[id]/editar, las dos
+// rutas con más First Load JS del build (Fase 7.2, ver docs/PERFORMANCE.md).
+const SortableImageGallery = dynamic(
+  () => import("@/components/seller/SortableImageGallery").then((m) => m.SortableImageGallery),
+  {
+    loading: () => <div className="h-24 w-full animate-pulse rounded-md bg-muted" />,
+  },
+);
 
 const CONDITION_LABELS: Record<ProductCondition, string> = {
   nuevo: "Nuevo",

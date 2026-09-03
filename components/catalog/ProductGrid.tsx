@@ -53,8 +53,16 @@ export function ProductGrid({
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} similarity={similarityById?.[product.id]} />
+      {products.map((product, index) => (
+        <ProductCard
+          key={product.id}
+          product={product}
+          similarity={similarityById?.[product.id]}
+          // Las primeras 4 tarjetas son la fila above-the-fold en el layout
+          // más ancho (xl:grid-cols-4) — el resto sigue cargando "lazy" como
+          // antes (Fase 7.2).
+          priority={index < 4}
+        />
       ))}
     </div>
   );
