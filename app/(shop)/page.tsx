@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/shared/ErrorState";
 import { LoadingState } from "@/components/shared/LoadingState";
 import { FiltersPanel } from "@/components/catalog/FiltersPanel";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
+import { CategoryCards } from "@/components/catalog/CategoryCards";
 import { Pagination } from "@/components/catalog/Pagination";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +18,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useProducts } from "@/hooks/useProducts";
+import { useCategories } from "@/hooks/useCategories";
 import { PRODUCTS_PAGE_SIZE } from "@/lib/constants/catalog";
 
 // useProducts lee useSearchParams(): Next.js exige un límite Suspense para
@@ -32,6 +34,7 @@ export default function HomePage() {
 function HomePageContent() {
   const { items, total, page, filters, loading, error, setFilter, setPage, retry } =
     useProducts();
+  const { categories } = useCategories();
   const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PAGE_SIZE));
 
   return (
@@ -46,6 +49,16 @@ function HomePageContent() {
           </h1>
         </Container>
       </div>
+
+      {/* Categorías visibles como tarjetas — antes solo estaban en el
+          dropdown "Categorías" del navbar, que sigue existiendo para
+          acceso rápido desde cualquier página. */}
+      <Container className="py-8">
+        <div className="mb-4 flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold">Explorá por categoría</h2>
+        </div>
+        <CategoryCards categories={categories} />
+      </Container>
 
       <Container className="grid gap-6 py-8 lg:grid-cols-[240px_1fr]">
         <aside className="hidden lg:block">

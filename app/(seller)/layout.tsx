@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { SellerSidebar } from "@/components/layout/SellerSidebar";
+import { SupportWidget } from "@/components/chat/SupportWidget";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SellerLayout({ children }: { children: React.ReactNode }) {
@@ -27,6 +28,7 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
     <div className="flex min-h-screen flex-col md:flex-row">
       <SellerSidebar />
       <main className="flex-1 p-4 md:p-6">{children}</main>
+      <SupportWidget />
     </div>
   );
 }
